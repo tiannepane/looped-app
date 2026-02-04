@@ -181,7 +181,7 @@ const ItemDescription = () => {
       {/* Next button */}
       <div className="p-4 border-t border-border">
         <Button
-          onClick={() => navigate("/pricing")}
+          onClick={() => navigate("/pricing", { state: { itemTitle: title, category } })}
           disabled={!isValid}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50"
