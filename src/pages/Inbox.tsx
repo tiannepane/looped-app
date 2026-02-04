@@ -65,11 +65,21 @@ const Inbox = () => {
 
   const handleMarkAsSold = () => {
     setShowSoldDialog(false);
+    const earnings = listing ? Math.round(listing.price * 0.95) : 0;
+    const fee = listing ? Math.round(listing.price * 0.05) : 0;
     toast({
-      title: "Item marked as sold!",
-      description: "Congratulations on your sale!",
+      title: "Item marked as sold! 🎉",
+      description: `You earned $${earnings} (after $${fee} Looped fee)`,
     });
-    navigate("/dashboard");
+    // Pass sold info to dashboard
+    navigate("/dashboard", {
+      state: {
+        soldItem: {
+          id: listing?.id,
+          soldPrice: listing?.price,
+        }
+      }
+    });
   };
 
   if (!listing) {

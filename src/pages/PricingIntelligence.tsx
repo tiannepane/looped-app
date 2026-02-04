@@ -161,6 +161,13 @@ const PricingIntelligence = () => {
               {timeline}
             </p>
           </Card>
+
+          {/* Commission reminder */}
+          <div className="bg-secondary/50 rounded-xl px-4 py-3">
+            <p className="text-xs text-muted-foreground text-center">
+              💰 You'll receive <span className="font-semibold text-foreground">${Math.round(price * 0.95)}</span> after Looped's 5% fee
+            </p>
+          </div>
         </div>
       </div>
 

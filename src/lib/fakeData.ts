@@ -9,6 +9,8 @@ export interface ListingItem {
   messageCount: number;
   postedDaysAgo: number;
   platforms: string[];
+  isSold?: boolean;
+  soldPrice?: number;
 }
 
 export interface Message {
