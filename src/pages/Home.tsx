@@ -35,9 +35,16 @@ const Home = () => {
         <h1 className="text-2xl font-semibold text-foreground text-center leading-tight mb-4">
           What would you like to sell today?
         </h1>
-        <p className="text-muted-foreground text-center mb-12 text-sm leading-relaxed">
+        <p className="text-muted-foreground text-center mb-8 text-sm leading-relaxed">
           Post once, sell everywhere. We'll list your item on multiple platforms automatically.
         </p>
+
+        {/* Commission disclosure */}
+        <div className="bg-secondary/50 rounded-xl px-4 py-3 mb-8 max-w-xs">
+          <p className="text-xs text-muted-foreground text-center">
+            💰 <span className="font-medium text-foreground">5% fee</span> on successful sales only. No upfront costs.
+          </p>
+        </div>
 
         {/* CTA Button */}
         <Button

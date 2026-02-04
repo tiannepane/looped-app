@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, MessageCircle } from "lucide-react";
+import { Plus, MessageCircle, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import BottomNav from "@/components/BottomNav";
 import { fakeListings, ListingItem } from "@/lib/fakeData";
@@ -29,9 +29,13 @@ const Dashboard = () => {
   const location = useLocation();
   const [listings, setListings] = useState<ListingItem[]>(fakeListings);
 
-  // Check for newly added listing from navigation state
+  // Check for newly added listing or sold item from navigation state
   useEffect(() => {
-    const state = location.state as { newListing?: NewListingState } | null;
+    const state = location.state as { 
+      newListing?: NewListingState; 
+      soldItem?: { id: string; soldPrice: number } 
+    } | null;
+    
     if (state?.newListing) {
       const { itemTitle, category, price, platforms } = state.newListing;
       
@@ -56,6 +60,17 @@ const Dashboard = () => {
       });
 
       // Clear the state to prevent re-adding on navigation
+      window.history.replaceState({}, document.title);
+    }
+    
+    if (state?.soldItem) {
+      const { id, soldPrice } = state.soldItem;
+      setListings((prev) => 
+        prev.map((l) => 
+          l.id === id ? { ...l, isSold: true, soldPrice } : l
+        )
+      );
+      // Clear the state
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -97,39 +112,62 @@ const Dashboard = () => {
                 key={listing.id}
                 onClick={() => handleCardClick(listing)}
                 className={`p-3 flex gap-3 bg-card border-border cursor-pointer hover:shadow-md transition-all duration-200 ease-out hover:scale-[1.01] ${
-                  index === 0 && listing.postedDaysAgo === 0 ? "ring-2 ring-primary/50" : ""
-                }`}
+                  index === 0 && listing.postedDaysAgo === 0 && !listing.isSold ? "ring-2 ring-primary/50" : ""
+                } ${listing.isSold ? "opacity-75" : ""}`}
               >
-                <img
-                  src={listing.image}
-                  alt={listing.title}
-                  className="w-20 h-20 rounded-xl object-cover flex-shrink-0"
-                />
+                <div className="relative">
+                  <img
+                    src={listing.image}
+                    alt={listing.title}
+                    className={`w-20 h-20 rounded-xl object-cover flex-shrink-0 ${listing.isSold ? "grayscale" : ""}`}
+                  />
+                  {listing.isSold && (
+                    <div className="absolute inset-0 bg-success/20 rounded-xl flex items-center justify-center">
+                      <CheckCircle className="w-8 h-8 text-success" />
+                    </div>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-foreground truncate">
                       {listing.title}
                     </h3>
-                    {listing.postedDaysAgo === 0 && (
+                    {listing.isSold ? (
+                      <span className="text-[10px] font-medium bg-success/10 text-success px-1.5 py-0.5 rounded-full flex-shrink-0">
+                        SOLD
+                      </span>
+                    ) : listing.postedDaysAgo === 0 ? (
                       <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex-shrink-0">
                         NEW
                       </span>
-                    )}
+                    ) : null}
                   </div>
-                  <p className="text-primary font-bold">${listing.price}</p>
-                  <div className="flex items-center gap-3 mt-2">
-                    {listing.messageCount > 0 && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>{listing.messageCount} messages</span>
-                      </div>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {listing.postedDaysAgo === 0 
-                        ? "Just posted" 
-                        : `Posted ${listing.postedDaysAgo} day${listing.postedDaysAgo !== 1 ? "s" : ""} ago`}
-                    </span>
-                  </div>
+                  {listing.isSold && listing.soldPrice ? (
+                    <div className="mt-1">
+                      <p className="text-success font-bold">${listing.soldPrice}</p>
+                      <p className="text-xs text-muted-foreground">
+                        You earned: <span className="font-medium text-foreground">${Math.round(listing.soldPrice * 0.95)}</span>
+                        <span className="text-muted-foreground/70"> (5% fee: ${Math.round(listing.soldPrice * 0.05)})</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-primary font-bold">${listing.price}</p>
+                  )}
+                  {!listing.isSold && (
+                    <div className="flex items-center gap-3 mt-2">
+                      {listing.messageCount > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>{listing.messageCount} messages</span>
+                        </div>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {listing.postedDaysAgo === 0 
+                          ? "Just posted" 
+                          : `Posted ${listing.postedDaysAgo} day${listing.postedDaysAgo !== 1 ? "s" : ""} ago`}
+                      </span>
+                    </div>
+                  )}
                   {/* Platform badges */}
                   <div className="flex gap-1 mt-2">
                     {listing.platforms.includes("facebook") && (

@@ -132,13 +132,25 @@ const PlatformSelection = () => {
                 <h3 className="font-semibold text-foreground truncate">
                   {itemTitle}
                 </h3>
-                <p className="text-primary font-bold">${price}</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-primary font-bold">${price}</p>
+                  <p className="text-xs text-muted-foreground">
+                    (you'll receive ${Math.round(price * 0.95)})
+                  </p>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Posting to {enabledCount} platform{enabledCount !== 1 && "s"}
                 </p>
               </div>
             </div>
           </Card>
+
+          {/* Commission disclosure */}
+          <div className="bg-muted/50 rounded-xl px-4 py-3">
+            <p className="text-xs text-muted-foreground text-center">
+              💰 Looped takes a <span className="font-medium text-foreground">5% fee</span> only when your item sells
+            </p>
+          </div>
         </div>
       </div>
 
