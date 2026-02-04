@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,53 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ScreenHeader from "@/components/ScreenHeader";
-import { categories, conditions, aiSuggestions } from "@/lib/fakeData";
+import { categories, conditions } from "@/lib/fakeData";
 import { cn } from "@/lib/utils";
+
+// Dynamic suggestion generator based on input
+const generateSuggestions = (input: string): string[] => {
+  const lower = input.toLowerCase().trim();
+  
+  if (!lower) return [];
+  
+  // Keyword-based suggestion mappings
+  const suggestionMap: Record<string, string[]> = {
+    chair: ["Gaming chair, ergonomic", "Office chair, adjustable height", "Dining chairs (set of 4)"],
+    desk: ["Standing desk, electric", "Computer desk with drawers", "Writing desk, solid wood"],
+    table: ["Coffee table, mid-century", "Dining table, seats 6", "Side table, marble top"],
+    sofa: ["Sectional sofa, L-shaped", "Leather sofa, 3-seater", "Sleeper sofa, queen size"],
+    couch: ["Velvet couch, modern", "Leather couch, brown", "Sectional couch with chaise"],
+    lamp: ["Floor lamp, adjustable", "Desk lamp, LED", "Vintage brass lamp"],
+    tv: ["Samsung 55\" Smart TV", "LG OLED 65\"", "TV stand with mount"],
+    phone: ["iPhone 14 Pro, 256GB", "Samsung Galaxy S23", "Google Pixel 8"],
+    laptop: ["MacBook Pro 14\"", "Dell XPS 15, like new", "Gaming laptop, RTX 4070"],
+    bike: ["Mountain bike, 21-speed", "Road bike, carbon frame", "Electric bike, 500W"],
+    camera: ["Canon EOS R6", "Sony A7 III with lens", "GoPro Hero 12"],
+    shoes: ["Nike Air Max, size 10", "Running shoes, barely worn", "Leather boots, size 9"],
+    jacket: ["Winter jacket, North Face", "Leather jacket, medium", "Rain jacket, waterproof"],
+    dresser: ["6-drawer dresser, white", "Vintage dresser, oak", "Modern dresser with mirror"],
+    bed: ["Queen bed frame, wood", "King mattress, memory foam", "Bunk bed, solid pine"],
+    bookshelf: ["5-tier bookshelf, walnut", "Floating shelves (set)", "Corner bookshelf, tall"],
+  };
+
+  // Find matching suggestions
+  for (const [keyword, suggestions] of Object.entries(suggestionMap)) {
+    if (lower.includes(keyword)) {
+      return suggestions;
+    }
+  }
+
+  // Generic suggestions based on partial input
+  if (lower.length >= 2) {
+    return [
+      `${input}, excellent condition`,
+      `${input}, barely used`,
+      `${input}, like new in box`,
+    ];
+  }
+
+  return [];
+};
 
 const ItemDescription = () => {
   const navigate = useNavigate();
@@ -22,12 +67,11 @@ const ItemDescription = () => {
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
 
+  const suggestions = useMemo(() => generateSuggestions(title), [title]);
   const isValid = title.trim() && category && condition;
 
   const handleSuggestionClick = (suggestion: string) => {
     setTitle(suggestion.slice(0, 60));
-    if (!category) setCategory("Furniture");
-    if (!condition) setCondition("Like New");
   };
 
   return (
@@ -55,23 +99,25 @@ const ItemDescription = () => {
             />
           </div>
 
-          {/* AI Suggestions */}
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">
-              Quick suggestions
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {aiSuggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  className="px-3 py-1.5 text-xs bg-secondary text-secondary-foreground rounded-full hover:bg-primary hover:text-primary-foreground transition-colors duration-200"
-                >
-                  {suggestion}
-                </button>
-              ))}
+          {/* AI Suggestions - only show when user has typed something */}
+          {suggestions.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">
+                ✨ AI suggestions
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="px-3 py-1.5 text-xs bg-secondary text-secondary-foreground rounded-full hover:bg-primary hover:text-primary-foreground transition-colors duration-200"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Category */}
           <div className="space-y-2">
