@@ -72,9 +72,22 @@ const PlatformSelection = () => {
       description: `Your item is now live on ${enabledCount} platform${enabledCount > 1 ? "s" : ""}.`,
     });
 
-    // Navigate to dashboard after brief success state
+    // Navigate to dashboard after brief success state, passing the new listing
+    const enabledPlatforms = Object.entries(enabled)
+      .filter(([_, isEnabled]) => isEnabled)
+      .map(([id]) => id);
+    
     setTimeout(() => {
-      navigate("/dashboard");
+      navigate("/dashboard", { 
+        state: { 
+          newListing: {
+            itemTitle,
+            category,
+            price,
+            platforms: enabledPlatforms,
+          }
+        }
+      });
     }, 1500);
   };
 

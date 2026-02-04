@@ -1,13 +1,64 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Plus, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import BottomNav from "@/components/BottomNav";
 import { fakeListings, ListingItem } from "@/lib/fakeData";
 
+// Map categories to placeholder images
+const getCategoryImage = (category: string): string => {
+  const imageMap: Record<string, string> = {
+    Furniture: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop",
+    Electronics: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=400&fit=crop",
+    Appliances: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400&h=400&fit=crop",
+    Clothing: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400&h=400&fit=crop",
+    Other: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop",
+  };
+  return imageMap[category] || imageMap.Other;
+};
+
+interface NewListingState {
+  itemTitle: string;
+  category: string;
+  price: number;
+  platforms: string[];
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [listings, setListings] = useState<ListingItem[]>(fakeListings);
+
+  // Check for newly added listing from navigation state
+  useEffect(() => {
+    const state = location.state as { newListing?: NewListingState } | null;
+    if (state?.newListing) {
+      const { itemTitle, category, price, platforms } = state.newListing;
+      
+      // Create new listing item
+      const newItem: ListingItem = {
+        id: `new-${Date.now()}`,
+        title: itemTitle,
+        price: price,
+        image: getCategoryImage(category),
+        category: category,
+        condition: "Like New",
+        description: "",
+        messageCount: 0,
+        postedDaysAgo: 0,
+        platforms: platforms,
+      };
+
+      // Add to top of listings (avoid duplicates on re-render)
+      setListings((prev) => {
+        if (prev.some((l) => l.id === newItem.id)) return prev;
+        return [newItem, ...prev];
+      });
+
+      // Clear the state to prevent re-adding on navigation
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Store listings in sessionStorage for the inbox to access
   const handleCardClick = (listing: ListingItem) => {
@@ -41,11 +92,13 @@ const Dashboard = () => {
               </button>
             </div>
           ) : (
-            listings.map((listing) => (
+            listings.map((listing, index) => (
               <Card
                 key={listing.id}
                 onClick={() => handleCardClick(listing)}
-                className="p-3 flex gap-3 bg-card border-border cursor-pointer hover:shadow-md transition-all duration-200 ease-out hover:scale-[1.01]"
+                className={`p-3 flex gap-3 bg-card border-border cursor-pointer hover:shadow-md transition-all duration-200 ease-out hover:scale-[1.01] ${
+                  index === 0 && listing.postedDaysAgo === 0 ? "ring-2 ring-primary/50" : ""
+                }`}
               >
                 <img
                   src={listing.image}
@@ -53,9 +106,16 @@ const Dashboard = () => {
                   className="w-20 h-20 rounded-xl object-cover flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">
-                    {listing.title}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-foreground truncate">
+                      {listing.title}
+                    </h3>
+                    {listing.postedDaysAgo === 0 && (
+                      <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex-shrink-0">
+                        NEW
+                      </span>
+                    )}
+                  </div>
                   <p className="text-primary font-bold">${listing.price}</p>
                   <div className="flex items-center gap-3 mt-2">
                     {listing.messageCount > 0 && (
@@ -65,8 +125,9 @@ const Dashboard = () => {
                       </div>
                     )}
                     <span className="text-xs text-muted-foreground">
-                      Posted {listing.postedDaysAgo} day
-                      {listing.postedDaysAgo !== 1 && "s"} ago
+                      {listing.postedDaysAgo === 0 
+                        ? "Just posted" 
+                        : `Posted ${listing.postedDaysAgo} day${listing.postedDaysAgo !== 1 ? "s" : ""} ago`}
                     </span>
                   </div>
                   {/* Platform badges */}
