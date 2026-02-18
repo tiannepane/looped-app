@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MobileFrame from "./components/MobileFrame";
 import Home from "./pages/Home";
 import PhotoCapture from "./pages/PhotoCapture";
-import ItemDescription from "./pages/ItemDescription";
+import ItemWhatWhere from "./pages/ItemWhatWhere";
+import ItemDetails from "./pages/ItemDetails";
 import PricingIntelligence from "./pages/PricingIntelligence";
 import PlatformSelection from "./pages/PlatformSelection";
 import Dashboard from "./pages/Dashboard";
@@ -26,7 +27,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/photo" element={<PhotoCapture />} />
-            <Route path="/description" element={<ItemDescription />} />
+            <Route path="/description" element={<ItemWhatWhere />} />
+            <Route path="/details" element={<ItemDetails />} />
             <Route path="/pricing" element={<PricingIntelligence />} />
             <Route path="/platforms" element={<PlatformSelection />} />
             <Route path="/dashboard" element={<Dashboard />} />

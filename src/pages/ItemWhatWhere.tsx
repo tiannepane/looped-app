@@ -1,17 +1,8 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { format, differenceInDays } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -20,15 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ScreenHeader from "@/components/ScreenHeader";
-import { categories, conditions } from "@/lib/fakeData";
-import { cn } from "@/lib/utils";
+import { categories } from "@/lib/fakeData";
 import {
   getNeighborhood,
-  getLocationDisplay,
   isValidPostalPrefix,
 } from "@/lib/postalCodeMap";
 
-// Dynamic suggestion generator based on input
 const generateSuggestions = (input: string): string[] => {
   const lower = input.toLowerCase().trim();
   if (!lower) return [];
@@ -66,16 +54,17 @@ const generateSuggestions = (input: string): string[] => {
   return [];
 };
 
-const ItemDescription = () => {
+const ItemWhatWhere = () => {
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [condition, setCondition] = useState("");
-  const [description, setDescription] = useState("");
+  const location = useLocation();
+
+  // Restore state if coming back from Screen 3B
+  const incoming = (location.state as Record<string, unknown>) || {};
+
+  const [title, setTitle] = useState((incoming.title as string) || "");
+  const [category, setCategory] = useState((incoming.category as string) || "");
+  const [postalCode, setPostalCode] = useState((incoming.postalCode as string) || "");
   const [showPostalError, setShowPostalError] = useState(false);
-  const [isMovingSale, setIsMovingSale] = useState(false);
-  const [movingDate, setMovingDate] = useState<Date | undefined>(undefined);
 
   const suggestions = useMemo(() => generateSuggestions(title), [title]);
 
@@ -88,11 +77,10 @@ const ItemDescription = () => {
   }, [postalCode]);
 
   const postalValid = isValidPostalPrefix(postalCode);
-  const isValid = title.trim() && category && condition && postalValid;
+  const isValid = title.trim() && category && postalValid;
 
   const handlePostalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\s/g, "").toUpperCase();
-    // Only allow letters and numbers, max 3 chars
     const filtered = raw.replace(/[^A-Z0-9]/g, "").slice(0, 3);
     setPostalCode(filtered);
     setShowPostalError(false);
@@ -103,14 +91,16 @@ const ItemDescription = () => {
       setShowPostalError(true);
       return;
     }
-    const locationDisplay = getLocationDisplay(postalCode);
-    navigate("/pricing", {
+    navigate("/details", {
       state: {
-        itemTitle: title,
+        title,
         category,
-        location: locationDisplay,
-        isMovingSale,
-        movingDate: movingDate ? movingDate.toISOString() : null,
+        postalCode,
+        // Pass through any 3B data so back navigation preserves it
+        condition: incoming.condition || "",
+        description: incoming.description || "",
+        isMovingSale: incoming.isMovingSale || false,
+        movingDate: incoming.movingDate || null,
       },
     });
   };
@@ -121,10 +111,16 @@ const ItemDescription = () => {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <ScreenHeader title="Item Details" />
+      <ScreenHeader title="Item Details (1/2)" />
+
+      {/* Progress dots */}
+      <div className="flex justify-center gap-2 py-2">
+        <div className="w-2 h-2 rounded-full bg-primary" />
+        <div className="w-2 h-2 rounded-full bg-muted" />
+      </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-5">
+        <div className="p-4 space-y-6">
           {/* Title */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
@@ -182,7 +178,7 @@ const ItemDescription = () => {
           </div>
 
           {/* Location — Postal Code */}
-          <div className="space-y-3 pt-1">
+          <div className="space-y-3">
             <Label className="text-sm font-medium">
               Where is this located?
             </Label>
@@ -205,7 +201,6 @@ const ItemDescription = () => {
               </p>
             </div>
 
-            {/* Neighborhood auto-detect */}
             {postalValid && (
               <p
                 className="text-sm font-medium transition-all duration-200"
@@ -215,129 +210,15 @@ const ItemDescription = () => {
               </p>
             )}
 
-            {/* Error */}
             {showPostalError && !postalValid && (
               <p className="text-sm text-destructive">
                 Please enter first 3 characters of your Toronto postal code (e.g., M5V)
               </p>
             )}
 
-            {/* Privacy note */}
             <p className="text-xs text-muted-foreground">
               ℹ️ We only show "{neighborhood ? `${neighborhood} (${postalCode.toUpperCase()})` : "King West (M5V)"}" to buyers to keep your privacy
             </p>
-          </div>
-
-          {/* Moving Sale Toggle */}
-          <div className="space-y-3 pt-1">
-            <Label className="text-sm font-medium">
-              🏠 Is this part of a moving sale?
-            </Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setIsMovingSale(false)}
-                className={cn(
-                  "py-3 px-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 text-left",
-                  !isMovingSale
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-foreground hover:border-primary/50"
-                )}
-              >
-                No, individual item
-              </button>
-              <button
-                onClick={() => setIsMovingSale(true)}
-                className={cn(
-                  "py-3 px-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 text-left",
-                  isMovingSale
-                    ? "border-orange-400 bg-orange-50 text-orange-900 dark:bg-orange-950 dark:text-orange-200"
-                    : "border-border bg-card text-foreground hover:border-primary/50"
-                )}
-              >
-                Yes, moving soon
-              </button>
-            </div>
-
-            {/* Conditional: Moving date + tip */}
-            {isMovingSale && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    When are you moving? (optional)
-                  </Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full h-14 justify-start text-left font-normal rounded-xl",
-                          !movingDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {movingDate ? format(movingDate, "MMMM d, yyyy") : "e.g., March 15"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={movingDate}
-                        onSelect={setMovingDate}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <p className="text-xs text-muted-foreground">
-                    Helps buyers know your timeline
-                  </p>
-                </div>
-                <p className="text-sm" style={{ color: "#F97316" }}>
-                  💡 Tip: Price 10-15% below market for quick sale
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Condition */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Condition</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {conditions.map((cond) => (
-                <button
-                  key={cond}
-                  onClick={() => setCondition(cond)}
-                  className={cn(
-                    "py-2.5 px-2 text-xs font-medium rounded-xl border-2 transition-all duration-200",
-                    condition === cond
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground hover:border-primary/50"
-                  )}
-                >
-                  {cond}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="description" className="text-sm font-medium">
-                Description
-              </Label>
-              <span className="text-xs text-muted-foreground">
-                {description.length}/500
-              </span>
-            </div>
-            <Textarea
-              id="description"
-              placeholder="Describe your item... Include details like size, color, brand, and any flaws."
-              value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, 500))}
-              className="min-h-[120px] rounded-xl resize-none"
-            />
           </div>
         </div>
       </div>
@@ -357,4 +238,4 @@ const ItemDescription = () => {
   );
 };
 
-export default ItemDescription;
+export default ItemWhatWhere;
