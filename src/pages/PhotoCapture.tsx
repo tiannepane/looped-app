@@ -154,7 +154,7 @@ const PhotoCapture = () => {
           onClick={() => navigate("/description", { state: { photos } })}
           disabled={photos.length === 0}
           size="lg"
-          className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50"
+          className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50 shadow-none hover:shadow-none"
         >
           Next
         </Button>
