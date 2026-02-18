@@ -4,6 +4,7 @@ import { TrendingUp, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import ScreenHeader from "@/components/ScreenHeader";
 
 const mockPricingData: Record<string, {
@@ -47,20 +48,34 @@ const matchPricingData = (itemTitle: string) => {
   return mockPricingData.default;
 };
 
+const getPriceZone = (price: number, quick: number, patient: number) => {
+  const greenThreshold = quick + (patient - quick) * 0.1;
+  if (price <= greenThreshold) return "green";
+  if (price <= patient) return "orange";
+  return "red";
+};
+
 const getTimeline = (price: number, quick: number, fair: number, patient: number) => {
   if (price <= quick) return "1-3 days";
-  if (price < fair) return "2-5 days";
-  if (price === fair) return "3-7 days";
-  if (price < patient) return "5-10 days";
-  return "7-14 days";
+  const greenThreshold = quick + (patient - quick) * 0.1;
+  if (price <= greenThreshold) return "1-3 days";
+  if (price <= patient) return "5-10 days";
+  if (price <= patient * 1.15) return "10-14+ days";
+  return "14+ days or may not sell";
 };
 
 const getContext = (price: number, quick: number, fair: number, patient: number) => {
-  if (price <= quick) return "Best for urgent moves";
-  if (price < fair) return "Leans towards a faster sale";
-  if (price === fair) return "Balanced approach";
-  if (price < patient) return "Leans towards max profit";
-  return "Maximize profit";
+  const greenThreshold = quick + (patient - quick) * 0.1;
+  if (price <= greenThreshold) return "Great for quick sales";
+  if (price <= patient) return "Leans towards max profit";
+  if (price <= patient * 1.15) return "May take a while to sell";
+  return "Significantly above market";
+};
+
+const priceColorMap = {
+  green: "#10B981",
+  orange: "#F59E0B",
+  red: "#EF4444",
 };
 
 const PricingIntelligence = () => {
@@ -72,12 +87,13 @@ const PricingIntelligence = () => {
   const { quickPrice, fairPrice, patientPrice } = data;
 
   const [price, setPrice] = useState(fairPrice);
+  const [customInput, setCustomInput] = useState("");
 
+  const zone = useMemo(() => getPriceZone(price, quickPrice, patientPrice), [price, quickPrice, patientPrice]);
   const timeline = useMemo(() => getTimeline(price, quickPrice, fairPrice, patientPrice), [price, quickPrice, fairPrice, patientPrice]);
   const context = useMemo(() => getContext(price, quickPrice, fairPrice, patientPrice), [price, quickPrice, fairPrice, patientPrice]);
 
   const handleSliderChange = useCallback((val: number[]) => {
-    // Snap to preset points within $8 range
     const v = val[0];
     if (Math.abs(v - quickPrice) < 8) setPrice(quickPrice);
     else if (Math.abs(v - fairPrice) < 8) setPrice(fairPrice);
@@ -85,7 +101,16 @@ const PricingIntelligence = () => {
     else setPrice(Math.round(v / 5) * 5);
   }, [quickPrice, fairPrice, patientPrice]);
 
+  const handleCustomPrice = useCallback(() => {
+    const parsed = parseInt(customInput, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 9999) {
+      setPrice(parsed);
+      setCustomInput("");
+    }
+  }, [customInput]);
+
   const searchLabel = itemTitle.length > 35 ? itemTitle.slice(0, 35) + "..." : itemTitle;
+  const sliderValue = Math.min(Math.max(price, quickPrice), patientPrice);
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -129,7 +154,7 @@ const PricingIntelligence = () => {
 
             <div className="px-1">
               <Slider
-                value={[price]}
+                value={[sliderValue]}
                 min={quickPrice}
                 max={patientPrice}
                 step={1}
@@ -163,9 +188,38 @@ const PricingIntelligence = () => {
 
           {/* Live price display */}
           <div className="text-center space-y-1 py-4">
-            <p className="text-5xl font-bold text-primary">${price}</p>
+            <p className="text-5xl font-bold transition-colors duration-200" style={{ color: priceColorMap[zone] }}>
+              ${price}
+            </p>
             <p className="text-sm text-muted-foreground">Likely sells in {timeline}</p>
             <p className="text-xs text-muted-foreground">{context}</p>
+          </div>
+
+          {/* Custom price input */}
+          <div className="text-center space-y-3 pb-2">
+            <p className="text-sm text-muted-foreground">Or enter custom price</p>
+            <div className="flex items-center justify-center gap-2">
+              <div className="relative w-[100px]">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={9999}
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCustomPrice()}
+                  placeholder={String(price)}
+                  className="pl-7 h-10 text-sm rounded-lg border-border"
+                />
+              </div>
+              <Button
+                onClick={handleCustomPrice}
+                variant="secondary"
+                className="h-10 px-4 text-sm rounded-lg"
+              >
+                Update
+              </Button>
+            </div>
           </div>
         </div>
       </div>
