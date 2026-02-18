@@ -95,10 +95,12 @@ const PricingIntelligence = () => {
 
   const handleSliderChange = useCallback((val: number[]) => {
     const v = val[0];
-    if (Math.abs(v - quickPrice) < 8) setPrice(quickPrice);
-    else if (Math.abs(v - fairPrice) < 8) setPrice(fairPrice);
-    else if (Math.abs(v - patientPrice) < 8) setPrice(patientPrice);
-    else setPrice(Math.round(v / 5) * 5);
+    const range = patientPrice - quickPrice;
+    const snap = Math.max(2, Math.round(range * 0.05));
+    if (Math.abs(v - quickPrice) <= snap) setPrice(quickPrice);
+    else if (Math.abs(v - fairPrice) <= snap) setPrice(fairPrice);
+    else if (Math.abs(v - patientPrice) <= snap) setPrice(patientPrice);
+    else setPrice(v);
   }, [quickPrice, fairPrice, patientPrice]);
 
   const handleCustomPrice = useCallback(() => {
