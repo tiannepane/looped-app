@@ -1,6 +1,12 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TrendingUp, Flame, X } from "lucide-react";
+import { TrendingUp, Flame } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -140,29 +146,28 @@ const PricingIntelligence = () => {
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-5">
-          {/* Moving Sale Tip Banner */}
-          {isMovingSale && showMovingTip && (
-            <div className="relative rounded-xl border-l-4 p-4" style={{ backgroundColor: "#FFF7ED", borderLeftColor: "#F97316" }}>
-              <button
-                onClick={() => setShowMovingTip(false)}
-                className="absolute top-2 right-2 p-1 rounded-full hover:bg-orange-100 transition-colors"
-              >
-                <X className="w-4 h-4 text-orange-400" />
-              </button>
-              <h4 className="font-semibold text-sm mb-1" style={{ color: "#9A3412" }}>
-                💡 Moving Sale Pricing Tip
-              </h4>
-              <p className="text-sm" style={{ color: "#78350F" }}>
-                For urgent moving sales, we recommend the Quick Sale price (1-3 days) to guarantee fast turnover.
-              </p>
-              {movingInfo && (
-                <div className="mt-2 text-sm" style={{ color: "#9A3412" }}>
-                  <p>Your moving date: {movingInfo.dateStr}</p>
-                  <p className="font-medium">{movingInfo.urgency}</p>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Moving Sale Tip Dialog */}
+          <Dialog open={isMovingSale && showMovingTip} onOpenChange={setShowMovingTip}>
+            <DialogContent className="rounded-2xl max-w-[340px]" style={{ backgroundColor: "#FFF7ED" }}>
+              <DialogHeader>
+                <DialogTitle className="text-base" style={{ color: "#9A3412" }}>
+                  💡 Moving Sale Pricing Tip
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm" style={{ color: "#78350F" }}>
+                  For urgent moving sales, we recommend the Quick Sale price (1-3 days) to guarantee fast turnover.
+                </p>
+                {movingInfo && (
+                  <div className="text-sm" style={{ color: "#9A3412" }}>
+                    <p>Your moving date: {movingInfo.dateStr}</p>
+                    <p className="font-medium">{movingInfo.urgency}</p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
 
           {/* Market Insights */}
           <Card className="p-5 bg-card border-border">
