@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,27 +14,17 @@ import {
 import ScreenHeader from "@/components/ScreenHeader";
 import { categories, conditions } from "@/lib/fakeData";
 import { cn } from "@/lib/utils";
-
-const torontoLocations = [
-  "Yonge & Bloor",
-  "Yonge & Eglinton",
-  "Dundas & Ossington",
-  "Queen & Spadina",
-  "King & Bathurst",
-  "College & Spadina",
-  "Bloor & Christie",
-  "Queen & Broadview",
-  "Danforth & Pape",
-  "St. Clair & Bathurst",
-];
+import {
+  getNeighborhood,
+  getLocationDisplay,
+  isValidPostalPrefix,
+} from "@/lib/postalCodeMap";
 
 // Dynamic suggestion generator based on input
 const generateSuggestions = (input: string): string[] => {
   const lower = input.toLowerCase().trim();
-  
   if (!lower) return [];
-  
-  // Keyword-based suggestion mappings
+
   const suggestionMap: Record<string, string[]> = {
     chair: ["Gaming chair, ergonomic", "Office chair, adjustable height", "Dining chairs (set of 4)"],
     desk: ["Standing desk, electric", "Computer desk with drawers", "Writing desk, solid wood"],
@@ -42,9 +32,9 @@ const generateSuggestions = (input: string): string[] => {
     sofa: ["Sectional sofa, L-shaped", "Leather sofa, 3-seater", "Sleeper sofa, queen size"],
     couch: ["Velvet couch, modern", "Leather couch, brown", "Sectional couch with chaise"],
     lamp: ["Floor lamp, adjustable", "Desk lamp, LED", "Vintage brass lamp"],
-    tv: ["Samsung 55\" Smart TV", "LG OLED 65\"", "TV stand with mount"],
+    tv: ['Samsung 55" Smart TV', 'LG OLED 65"', "TV stand with mount"],
     phone: ["iPhone 14 Pro, 256GB", "Samsung Galaxy S23", "Google Pixel 8"],
-    laptop: ["MacBook Pro 14\"", "Dell XPS 15, like new", "Gaming laptop, RTX 4070"],
+    laptop: ['MacBook Pro 14"', "Dell XPS 15, like new", "Gaming laptop, RTX 4070"],
     bike: ["Mountain bike, 21-speed", "Road bike, carbon frame", "Electric bike, 500W"],
     camera: ["Canon EOS R6", "Sony A7 III with lens", "GoPro Hero 12"],
     shoes: ["Nike Air Max, size 10", "Running shoes, barely worn", "Leather boots, size 9"],
@@ -54,14 +44,10 @@ const generateSuggestions = (input: string): string[] => {
     bookshelf: ["5-tier bookshelf, walnut", "Floating shelves (set)", "Corner bookshelf, tall"],
   };
 
-  // Find matching suggestions
   for (const [keyword, suggestions] of Object.entries(suggestionMap)) {
-    if (lower.includes(keyword)) {
-      return suggestions;
-    }
+    if (lower.includes(keyword)) return suggestions;
   }
 
-  // Generic suggestions based on partial input
   if (lower.length >= 2) {
     return [
       `${input}, excellent condition`,
@@ -69,7 +55,6 @@ const generateSuggestions = (input: string): string[] => {
       `${input}, like new in box`,
     ];
   }
-
   return [];
 };
 
@@ -77,30 +62,40 @@ const ItemDescription = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
-  const [location, setLocation] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
-  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
-  const locationRef = useRef<HTMLDivElement>(null);
+  const [showPostalError, setShowPostalError] = useState(false);
 
   const suggestions = useMemo(() => generateSuggestions(title), [title]);
-  const locationSuggestions = useMemo(() => {
-    if (!location.trim()) return torontoLocations;
-    return torontoLocations.filter((l) =>
-      l.toLowerCase().includes(location.toLowerCase())
-    );
-  }, [location]);
-  const isValid = title.trim() && category && condition && location.trim();
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
-        setShowLocationSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const neighborhood = useMemo(() => {
+    const clean = postalCode.toUpperCase().replace(/\s/g, "");
+    if (clean.length === 3 && isValidPostalPrefix(clean)) {
+      return getNeighborhood(clean);
+    }
+    return null;
+  }, [postalCode]);
+
+  const postalValid = isValidPostalPrefix(postalCode);
+  const isValid = title.trim() && category && condition && postalValid;
+
+  const handlePostalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\s/g, "").toUpperCase();
+    // Only allow letters and numbers, max 3 chars
+    const filtered = raw.replace(/[^A-Z0-9]/g, "").slice(0, 3);
+    setPostalCode(filtered);
+    setShowPostalError(false);
+  };
+
+  const handleNext = () => {
+    if (!postalValid) {
+      setShowPostalError(true);
+      return;
+    }
+    const locationDisplay = getLocationDisplay(postalCode);
+    navigate("/pricing", { state: { itemTitle: title, category, location: locationDisplay } });
+  };
 
   const handleSuggestionClick = (suggestion: string) => {
     setTitle(suggestion.slice(0, 60));
@@ -131,7 +126,7 @@ const ItemDescription = () => {
             />
           </div>
 
-          {/* AI Suggestions - only show when user has typed something */}
+          {/* AI Suggestions */}
           {suggestions.length > 0 && (
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">
@@ -168,51 +163,51 @@ const ItemDescription = () => {
             </Select>
           </div>
 
-          {/* Location */}
-          <div className="space-y-2" ref={locationRef}>
-            <Label htmlFor="location" className="text-sm font-medium">
-              📍 Where is it located? <span className="text-destructive">*</span>
+          {/* Location — Postal Code */}
+          <div className="space-y-3 pt-1">
+            <Label className="text-sm font-medium">
+              Where is this located?
             </Label>
-            <div className="relative">
+
+            <div className="space-y-2">
+              <Label htmlFor="postalCode" className="text-xs text-muted-foreground">
+                📮 Your postal code (first 3 characters only) <span className="text-destructive">*</span>
+              </Label>
               <Input
-                id="location"
-                placeholder="e.g., Yonge & Bloor, Queen West, etc."
-                value={location}
-                onChange={(e) => {
-                  setLocation(e.target.value);
-                  setShowLocationSuggestions(true);
-                }}
-                onFocus={() => setShowLocationSuggestions(true)}
-                className="h-12 rounded-xl capitalize"
-                autoCapitalize="words"
+                id="postalCode"
+                placeholder="M5V"
+                value={postalCode}
+                onChange={handlePostalChange}
+                maxLength={3}
+                autoCapitalize="characters"
+                className="h-14 w-[100px] rounded-xl text-xl font-semibold text-center tracking-widest uppercase"
               />
-              {showLocationSuggestions && locationSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-xl shadow-lg max-h-[200px] overflow-y-auto">
-                  {locationSuggestions.map((loc) => (
-                    <button
-                      key={loc}
-                      onClick={() => {
-                        setLocation(loc);
-                        setShowLocationSuggestions(false);
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors first:rounded-t-xl last:rounded-b-xl"
-                    >
-                      📍 {loc}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Example: M5V, M4E, M6G
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setLocation("Yonge & Bloor");
-                setShowLocationSuggestions(false);
-              }}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Or use current location
-            </button>
+
+            {/* Neighborhood auto-detect */}
+            {postalValid && (
+              <p
+                className="text-sm font-medium transition-all duration-200"
+                style={{ color: "#10B981" }}
+              >
+                ✓ This is in {neighborhood || `${postalCode.toUpperCase()} area`}
+              </p>
+            )}
+
+            {/* Error */}
+            {showPostalError && !postalValid && (
+              <p className="text-sm text-destructive">
+                Please enter first 3 characters of your Toronto postal code (e.g., M5V)
+              </p>
+            )}
+
+            {/* Privacy note */}
+            <p className="text-xs text-muted-foreground">
+              ℹ️ We only show "{neighborhood ? `${neighborhood} (${postalCode.toUpperCase()})` : "King West (M5V)"}" to buyers to keep your privacy
+            </p>
           </div>
 
           {/* Condition */}
@@ -260,7 +255,7 @@ const ItemDescription = () => {
       {/* Next button */}
       <div className="p-4 border-t border-border">
         <Button
-          onClick={() => navigate("/pricing", { state: { itemTitle: title, category, location } })}
+          onClick={handleNext}
           disabled={!isValid}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50"
