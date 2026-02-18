@@ -7,15 +7,14 @@ const Home = () => {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 pb-20">
         {/* Logo */}
-        <div className="mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
+        <div className="mb-3">
+          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center">
             <svg
               viewBox="0 0 24 24"
               fill="none"
-              className="w-9 h-9 text-primary-foreground"
+              className="w-8 h-8 text-primary-foreground"
               strokeWidth="2"
               stroke="currentColor"
             >
@@ -28,32 +27,33 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Brand name */}
-        <h2 className="text-2xl font-bold text-primary mb-12">Looped</h2>
+        {/* Wordmark */}
+        <h2 className="text-xl font-bold text-primary mb-16">Looped</h2>
 
-        {/* Welcome text */}
-        <h1 className="text-2xl font-semibold text-foreground text-center leading-tight mb-4">
-          What would you like to sell?
+        {/* Headline */}
+        <h1 className="text-2xl font-bold text-foreground text-center leading-tight mb-3">
+          Sell faster with
+          <br />
+          smart pricing
         </h1>
-        <p className="text-muted-foreground text-center mb-8 text-sm leading-relaxed">
-          Post once, sell everywhere. We'll list your item on multiple platforms automatically.
+
+        {/* Subheadline */}
+        <p className="text-base text-muted-foreground text-center mb-10">
+          Know the right price in 30 seconds
         </p>
 
-        {/* Subscription disclosure */}
-        <div className="bg-secondary/50 rounded-xl px-4 py-3 mb-8 max-w-xs">
-          <p className="text-xs text-muted-foreground text-center">
-            ✨ <span className="font-medium text-foreground">Free to try.</span> $5 for 30 days of unlimited listings. (Renew only when you need it)
-          </p>
-        </div>
-
-        {/* CTA Button */}
+        {/* CTA */}
         <Button
           onClick={() => navigate("/photo")}
-          size="lg"
-          className="w-full max-w-xs h-14 text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 ease-out hover:scale-[1.02]"
+          className="w-full max-w-xs h-14 text-lg font-medium rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 text-white shadow-lg shadow-orange-500/25 transition-all duration-300"
         >
-          Start Selling
+          Get Started
         </Button>
+
+        {/* Pricing note */}
+        <p className="text-sm text-muted-foreground mt-4">
+          Free to try • $5/month
+        </p>
       </div>
 
       <BottomNav />
