@@ -10,7 +10,7 @@ import ItemDescription from "./pages/ItemDescription";
 import PricingIntelligence from "./pages/PricingIntelligence";
 import PlatformSelection from "./pages/PlatformSelection";
 import Dashboard from "./pages/Dashboard";
-import Inbox from "./pages/Inbox";
+// Inbox removed — out of scope for MVP
 import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
 
@@ -30,7 +30,7 @@ const App = () => (
             <Route path="/pricing" element={<PricingIntelligence />} />
             <Route path="/platforms" element={<PlatformSelection />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/inbox/:id" element={<Inbox />} />
+            {/* Inbox route removed — MVP */}
             <Route path="/account" element={<Account />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
