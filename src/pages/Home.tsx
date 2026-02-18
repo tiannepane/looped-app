@@ -45,7 +45,7 @@ const Home = () => {
         {/* CTA */}
         <Button
           onClick={() => navigate("/photo")}
-          className="w-full max-w-xs h-14 text-lg font-medium rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 text-white shadow-lg shadow-orange-500/25 transition-all duration-300"
+          className="w-full max-w-xs h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-none transition-all duration-300"
         >
           Get Started
         </Button>
