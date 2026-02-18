@@ -132,12 +132,7 @@ const PlatformSelection = () => {
                 <h3 className="font-semibold text-foreground truncate">
                   {itemTitle}
                 </h3>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-primary font-bold">${price}</p>
-                  <p className="text-xs text-muted-foreground">
-                    (you'll receive ${Math.round(price * 0.95)})
-                  </p>
-                </div>
+                <p className="text-primary font-bold">${price}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Posting to {enabledCount} platform{enabledCount !== 1 && "s"}
                 </p>
@@ -148,7 +143,7 @@ const PlatformSelection = () => {
           {/* Subscription disclosure */}
           <div className="bg-muted/50 rounded-xl px-4 py-3">
             <p className="text-xs text-muted-foreground text-center">
-              💡 First 3 listings free. Upgrade to unlimited for <span className="font-medium text-foreground">$5/30 days</span>.
+              💡 <span className="font-medium text-foreground">$5 for 30 days</span> of unlimited listings
             </p>
           </div>
         </div>

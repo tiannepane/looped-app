@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, MessageCircle, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import BottomNav from "@/components/BottomNav";
 import { fakeListings, ListingItem } from "@/lib/fakeData";
 
-// Map categories to placeholder images
 const getCategoryImage = (category: string): string => {
   const imageMap: Record<string, string> = {
     Furniture: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop",
@@ -28,62 +38,60 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [listings, setListings] = useState<ListingItem[]>(fakeListings);
+  const [selectedListing, setSelectedListing] = useState<ListingItem | null>(null);
+  const [showActions, setShowActions] = useState(false);
+  const [showSoldConfirm, setShowSoldConfirm] = useState(false);
+  const [showCongrats, setShowCongrats] = useState(false);
 
-  // Check for newly added listing or sold item from navigation state
   useEffect(() => {
-    const state = location.state as { 
-      newListing?: NewListingState; 
-      soldItem?: { id: string; soldPrice: number } 
-    } | null;
-    
+    const state = location.state as { newListing?: NewListingState } | null;
     if (state?.newListing) {
       const { itemTitle, category, price, platforms } = state.newListing;
-      
-      // Create new listing item
       const newItem: ListingItem = {
         id: `new-${Date.now()}`,
         title: itemTitle,
-        price: price,
+        price,
         image: getCategoryImage(category),
-        category: category,
+        category,
         condition: "Like New",
         description: "",
         messageCount: 0,
         postedDaysAgo: 0,
-        platforms: platforms,
+        platforms,
       };
-
-      // Add to top of listings (avoid duplicates on re-render)
       setListings((prev) => {
         if (prev.some((l) => l.id === newItem.id)) return prev;
         return [newItem, ...prev];
       });
-
-      // Clear the state to prevent re-adding on navigation
-      window.history.replaceState({}, document.title);
-    }
-    
-    if (state?.soldItem) {
-      const { id, soldPrice } = state.soldItem;
-      setListings((prev) => 
-        prev.map((l) => 
-          l.id === id ? { ...l, isSold: true, soldPrice } : l
-        )
-      );
-      // Clear the state
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
-  // Store listings in sessionStorage for the inbox to access
   const handleCardClick = (listing: ListingItem) => {
-    sessionStorage.setItem("currentListing", JSON.stringify(listing));
-    navigate(`/inbox/${listing.id}`);
+    setSelectedListing(listing);
+    setShowActions(true);
+  };
+
+  const handleMarkAsSold = () => {
+    if (!selectedListing) return;
+    setShowSoldConfirm(false);
+    setListings((prev) =>
+      prev.map((l) =>
+        l.id === selectedListing.id ? { ...l, isSold: true, soldPrice: l.price } : l
+      )
+    );
+    setShowCongrats(true);
+  };
+
+  const handleDelete = () => {
+    if (!selectedListing) return;
+    setShowActions(false);
+    setListings((prev) => prev.filter((l) => l.id !== selectedListing.id));
+    setSelectedListing(null);
   };
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header */}
       <header className="h-14 flex items-center justify-between px-4 bg-background border-b border-border">
         <h1 className="text-lg font-bold text-foreground">Your Items</h1>
         <button
@@ -122,18 +130,16 @@ const Dashboard = () => {
                     className={`w-20 h-20 rounded-xl object-cover flex-shrink-0 ${listing.isSold ? "grayscale" : ""}`}
                   />
                   {listing.isSold && (
-                    <div className="absolute inset-0 bg-success/20 rounded-xl flex items-center justify-center">
-                      <CheckCircle className="w-8 h-8 text-success" />
+                    <div className="absolute inset-0 bg-secondary/40 rounded-xl flex items-center justify-center">
+                      <CheckCircle className="w-8 h-8 text-primary" />
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-foreground truncate">
-                      {listing.title}
-                    </h3>
+                    <h3 className="font-semibold text-foreground truncate">{listing.title}</h3>
                     {listing.isSold ? (
-                      <span className="text-[10px] font-medium bg-success/10 text-success px-1.5 py-0.5 rounded-full flex-shrink-0">
+                      <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full flex-shrink-0">
                         SOLD
                       </span>
                     ) : listing.postedDaysAgo === 0 ? (
@@ -142,39 +148,31 @@ const Dashboard = () => {
                       </span>
                     ) : null}
                   </div>
-                  {listing.isSold && listing.soldPrice ? (
-                    <div className="mt-1">
-                      <p className="text-success font-bold">Sold for: ${listing.soldPrice}</p>
-                    </div>
-                  ) : (
-                    <p className="text-primary font-bold">${listing.price}</p>
-                  )}
-                  {!listing.isSold && (
-                    <div className="flex items-center gap-3 mt-2">
-                      {listing.messageCount > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>{listing.messageCount} messages</span>
+                  <p className="text-primary font-bold">${listing.price}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    {listing.isSold ? (
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Sold</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-primary" />
+                          <span className="text-xs text-muted-foreground">Active</span>
                         </div>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {listing.postedDaysAgo === 0 
-                          ? "Just posted" 
-                          : `Posted ${listing.postedDaysAgo} day${listing.postedDaysAgo !== 1 ? "s" : ""} ago`}
-                      </span>
-                    </div>
-                  )}
-                  {/* Platform badges */}
-                  <div className="flex gap-1 mt-2">
-                    {listing.platforms.includes("facebook") && (
-                      <span className="text-xs">📘</span>
+                        <span className="text-xs text-muted-foreground">
+                          {listing.postedDaysAgo === 0
+                            ? "Just posted"
+                            : `Posted ${listing.postedDaysAgo} day${listing.postedDaysAgo !== 1 ? "s" : ""} ago`}
+                        </span>
+                      </>
                     )}
-                    {listing.platforms.includes("kijiji") && (
-                      <span className="text-xs">🟣</span>
-                    )}
-                    {listing.platforms.includes("carrot") && (
-                      <span className="text-xs">🥕</span>
-                    )}
+                  </div>
+                  <div className="flex gap-1 mt-1.5">
+                    {listing.platforms.includes("facebook") && <span className="text-xs">📘</span>}
+                    {listing.platforms.includes("kijiji") && <span className="text-xs">🟣</span>}
+                    {listing.platforms.includes("carrot") && <span className="text-xs">🥕</span>}
                   </div>
                 </div>
               </Card>
@@ -184,6 +182,88 @@ const Dashboard = () => {
       </div>
 
       <BottomNav />
+
+      {/* Action modal */}
+      <AlertDialog open={showActions} onOpenChange={setShowActions}>
+        <AlertDialogContent className="max-w-[300px] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg">{selectedListing?.title}</AlertDialogTitle>
+            <AlertDialogDescription className="text-primary font-bold text-base">
+              ${selectedListing?.price}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 pt-2">
+            {!selectedListing?.isSold && (
+              <Button
+                onClick={() => {
+                  setShowActions(false);
+                  setShowSoldConfirm(true);
+                }}
+                className="w-full h-12 rounded-xl"
+              >
+                Mark as Sold
+              </Button>
+            )}
+            <Button variant="outline" className="w-full h-12 rounded-xl" onClick={() => setShowActions(false)}>
+              Edit Listing
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full h-12 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
+          </div>
+          <AlertDialogFooter className="pt-0">
+            <AlertDialogCancel className="w-full rounded-xl">Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Sold confirmation */}
+      <AlertDialog open={showSoldConfirm} onOpenChange={setShowSoldConfirm}>
+        <AlertDialogContent className="max-w-[300px] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as Sold?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove "{selectedListing?.title}" from all platforms.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkAsSold} className="rounded-xl">
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Congrats modal */}
+      <AlertDialog open={showCongrats} onOpenChange={setShowCongrats}>
+        <AlertDialogContent className="max-w-[300px] rounded-2xl text-center">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">Congrats! 🎉</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p className="text-primary font-bold text-lg">Sold for ${selectedListing?.price}</p>
+              <p className="text-sm text-muted-foreground">
+                This listing has been removed from all platforms
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogAction
+              onClick={() => {
+                setShowCongrats(false);
+                setSelectedListing(null);
+              }}
+              className="w-full rounded-xl"
+            >
+              Done
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

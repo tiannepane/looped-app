@@ -52,7 +52,7 @@ const Home = () => {
 
         {/* Pricing note */}
         <p className="text-sm text-muted-foreground mt-4">
-          Free to try • $5/month
+          $5 for 30 days • Renew when you need it
         </p>
       </div>
 
