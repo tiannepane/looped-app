@@ -80,8 +80,8 @@ const priceColorMap = {
 
 const PricingIntelligence = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { itemTitle = "item", category = "Other" } = (location.state as { itemTitle?: string; category?: string }) || {};
+  const loc = useLocation();
+  const { itemTitle = "item", category = "Other", location: itemLocation = "" } = (loc.state as { itemTitle?: string; category?: string; location?: string }) || {};
 
   const data = useMemo(() => matchPricingData(itemTitle), [itemTitle]);
   const { quickPrice, fairPrice, patientPrice } = data;
@@ -229,7 +229,7 @@ const PricingIntelligence = () => {
       {/* CTA */}
       <div className="p-4 border-t border-border">
         <Button
-          onClick={() => navigate("/platforms", { state: { itemTitle, category, price } })}
+          onClick={() => navigate("/platforms", { state: { itemTitle, category, price, location: itemLocation } })}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 ease-out"
         >

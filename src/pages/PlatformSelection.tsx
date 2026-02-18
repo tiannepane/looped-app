@@ -41,8 +41,9 @@ const PlatformSelection = () => {
   const { 
     itemTitle = "Your Item", 
     category = "Other", 
-    price = 100 
-  } = (location.state as { itemTitle?: string; category?: string; price?: number }) || {};
+    price = 100,
+    location: itemLocation = "",
+  } = (location.state as { itemTitle?: string; category?: string; price?: number; location?: string }) || {};
 
   const [enabled, setEnabled] = useState<Record<string, boolean>>({
     facebook: true,
@@ -132,6 +133,9 @@ const PlatformSelection = () => {
                 <h3 className="font-semibold text-foreground truncate">
                   {itemTitle}
                 </h3>
+                {itemLocation && (
+                  <p className="text-xs text-muted-foreground">📍 {itemLocation}</p>
+                )}
                 <p className="text-primary font-bold">${price}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Posting to {enabledCount} platform{enabledCount !== 1 && "s"}

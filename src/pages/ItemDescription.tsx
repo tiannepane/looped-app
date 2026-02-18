@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,19 @@ import {
 import ScreenHeader from "@/components/ScreenHeader";
 import { categories, conditions } from "@/lib/fakeData";
 import { cn } from "@/lib/utils";
+
+const torontoLocations = [
+  "Yonge & Bloor",
+  "Yonge & Eglinton",
+  "Dundas & Ossington",
+  "Queen & Spadina",
+  "King & Bathurst",
+  "College & Spadina",
+  "Bloor & Christie",
+  "Queen & Broadview",
+  "Danforth & Pape",
+  "St. Clair & Bathurst",
+];
 
 // Dynamic suggestion generator based on input
 const generateSuggestions = (input: string): string[] => {
@@ -64,11 +77,30 @@ const ItemDescription = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const locationRef = useRef<HTMLDivElement>(null);
 
   const suggestions = useMemo(() => generateSuggestions(title), [title]);
-  const isValid = title.trim() && category && condition;
+  const locationSuggestions = useMemo(() => {
+    if (!location.trim()) return torontoLocations;
+    return torontoLocations.filter((l) =>
+      l.toLowerCase().includes(location.toLowerCase())
+    );
+  }, [location]);
+  const isValid = title.trim() && category && condition && location.trim();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
+        setShowLocationSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleSuggestionClick = (suggestion: string) => {
     setTitle(suggestion.slice(0, 60));
@@ -136,6 +168,53 @@ const ItemDescription = () => {
             </Select>
           </div>
 
+          {/* Location */}
+          <div className="space-y-2" ref={locationRef}>
+            <Label htmlFor="location" className="text-sm font-medium">
+              📍 Where is it located? <span className="text-destructive">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="location"
+                placeholder="e.g., Yonge & Bloor, Queen West, etc."
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  setShowLocationSuggestions(true);
+                }}
+                onFocus={() => setShowLocationSuggestions(true)}
+                className="h-12 rounded-xl capitalize"
+                autoCapitalize="words"
+              />
+              {showLocationSuggestions && locationSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-xl shadow-lg max-h-[200px] overflow-y-auto">
+                  {locationSuggestions.map((loc) => (
+                    <button
+                      key={loc}
+                      onClick={() => {
+                        setLocation(loc);
+                        setShowLocationSuggestions(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      📍 {loc}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLocation("Yonge & Bloor");
+                setShowLocationSuggestions(false);
+              }}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Or use current location
+            </button>
+          </div>
+
           {/* Condition */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Condition</Label>
@@ -181,7 +260,7 @@ const ItemDescription = () => {
       {/* Next button */}
       <div className="p-4 border-t border-border">
         <Button
-          onClick={() => navigate("/pricing", { state: { itemTitle: title, category } })}
+          onClick={() => navigate("/pricing", { state: { itemTitle: title, category, location } })}
           disabled={!isValid}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50"
