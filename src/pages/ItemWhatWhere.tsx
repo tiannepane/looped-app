@@ -58,7 +58,6 @@ const ItemWhatWhere = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Restore state if coming back from Screen 3B
   const incoming = (location.state as Record<string, unknown>) || {};
 
   const [title, setTitle] = useState((incoming.title as string) || "");
@@ -96,7 +95,6 @@ const ItemWhatWhere = () => {
         title,
         category,
         postalCode,
-        // Pass through any 3B data so back navigation preserves it
         condition: incoming.condition || "",
         description: incoming.description || "",
         isMovingSale: incoming.isMovingSale || false,
@@ -114,20 +112,20 @@ const ItemWhatWhere = () => {
       <ScreenHeader title="Item Details (1/2)" />
 
       {/* Progress dots */}
-      <div className="flex justify-center gap-2 py-2">
+      <div className="flex justify-center gap-4 py-3">
         <div className="w-2 h-2 rounded-full bg-primary" />
         <div className="w-2 h-2 rounded-full bg-muted" />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        <div className="flex-1 px-6 flex flex-col" style={{ gap: "40px", paddingTop: "16px" }}>
           {/* Title */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <Label htmlFor="title" className="text-sm font-medium">
+              <Label htmlFor="title" className="text-lg font-bold">
                 What are you selling?
               </Label>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 {title.length}/60
               </span>
             </div>
@@ -136,14 +134,15 @@ const ItemWhatWhere = () => {
               placeholder="e.g. IKEA coffee table"
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 60))}
-              className="h-12 rounded-xl"
+              className="rounded-xl"
+              style={{ height: "60px", fontSize: "16px", padding: "20px 16px" }}
             />
           </div>
 
           {/* AI Suggestions */}
           {suggestions.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">
+            <div className="space-y-2 -mt-5">
+              <Label className="text-sm text-muted-foreground">
                 ✨ AI suggestions
               </Label>
               <div className="flex flex-wrap gap-2">
@@ -161,10 +160,13 @@ const ItemWhatWhere = () => {
           )}
 
           {/* Category */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Category</Label>
+          <div className="space-y-3">
+            <Label className="text-lg font-bold">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="h-12 rounded-xl">
+              <SelectTrigger
+                className="rounded-xl"
+                style={{ height: "60px", fontSize: "16px", padding: "20px 16px" }}
+              >
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent className="bg-popover">
@@ -179,12 +181,12 @@ const ItemWhatWhere = () => {
 
           {/* Location — Postal Code */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">
+            <Label className="text-lg font-bold">
               Where is this located?
             </Label>
 
             <div className="space-y-2">
-              <Label htmlFor="postalCode" className="text-xs text-muted-foreground">
+              <Label htmlFor="postalCode" className="text-sm text-muted-foreground">
                 📮 Your postal code (first 3 characters only) <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -194,13 +196,14 @@ const ItemWhatWhere = () => {
                 onChange={handlePostalChange}
                 maxLength={3}
                 autoCapitalize="characters"
-                className="h-14 w-[100px] rounded-xl text-xl font-semibold text-center tracking-widest uppercase"
+                className="rounded-xl font-semibold text-center uppercase"
+                style={{ height: "70px", width: "120px", fontSize: "24px", letterSpacing: "4px" }}
               />
             </div>
 
             {postalValid && neighborhood && (
               <p
-                className="text-sm font-medium transition-all duration-200"
+                className="text-lg font-medium transition-all duration-200 my-4"
                 style={{ color: "#10B981" }}
               >
                 ✓ This is in {neighborhood}
@@ -217,12 +220,12 @@ const ItemWhatWhere = () => {
       </div>
 
       {/* Next button */}
-      <div className="p-4 border-t border-border">
+      <div className="px-6 pb-8 pt-4 border-t border-border">
         <Button
           onClick={handleNext}
           disabled={!isValid}
-          size="lg"
-          className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50"
+          className="w-full font-semibold rounded-xl transition-all duration-300 ease-out disabled:opacity-50"
+          style={{ height: "60px", fontSize: "18px" }}
         >
           Next
         </Button>

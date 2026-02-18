@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -48,7 +48,6 @@ const ItemDetails = () => {
   };
 
   const handleBack = () => {
-    // Go back to 3A, preserving all data
     navigate("/description", {
       state: {
         title,
@@ -67,27 +66,28 @@ const ItemDetails = () => {
       <ScreenHeader title="Item Details (2/2)" onBack={handleBack} />
 
       {/* Progress dots */}
-      <div className="flex justify-center gap-2 py-2">
+      <div className="flex justify-center gap-4 py-3">
         <div className="w-2 h-2 rounded-full bg-muted" />
         <div className="w-2 h-2 rounded-full bg-primary" />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        <div className="flex-1 px-6 flex flex-col" style={{ gap: "40px", paddingTop: "16px" }}>
           {/* Condition */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Condition</Label>
+          <div className="space-y-3">
+            <Label className="text-lg font-bold">Condition</Label>
             <div className="grid grid-cols-4 gap-2">
               {conditions.map((cond) => (
                 <button
                   key={cond}
                   onClick={() => setCondition(cond)}
                   className={cn(
-                    "py-2.5 px-2 text-xs font-medium rounded-xl border-2 transition-all duration-200",
+                    "text-base font-medium rounded-xl border-2 transition-all duration-200",
                     condition === cond
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card text-foreground hover:border-primary/50"
                   )}
+                  style={{ height: "70px", fontSize: "16px" }}
                 >
                   {cond}
                 </button>
@@ -96,12 +96,12 @@ const ItemDetails = () => {
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <Label htmlFor="description" className="text-sm font-medium">
-                Description <span className="text-muted-foreground font-normal">(optional)</span>
+              <Label htmlFor="description" className="text-lg font-bold">
+                Description <span className="text-muted-foreground font-normal text-base">(optional)</span>
               </Label>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 {description.length}/500
               </span>
             </div>
@@ -110,47 +110,52 @@ const ItemDetails = () => {
               placeholder="Describe your item... Include details like size, color, brand, and any flaws."
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, 500))}
-              className="min-h-[100px] rounded-xl resize-none"
+              className="rounded-xl resize-none"
+              style={{ minHeight: "160px", fontSize: "16px", padding: "16px" }}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm" style={{ color: "#F97316", marginTop: "12px" }}>
               💡 Tip: Mention size, color, brand, or any flaws
             </p>
           </div>
 
           {/* Moving Sale Toggle */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">
+            <Label className="text-lg font-bold">
               🏠 Is this part of a moving sale?
             </Label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-3">
               <button
                 onClick={() => setIsMovingSale(false)}
                 className={cn(
-                  "py-3 px-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 text-left",
+                  "flex items-center justify-between font-medium rounded-xl border-2 transition-all duration-200 text-left px-4",
                   !isMovingSale
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-card text-foreground hover:border-primary/50"
                 )}
+                style={{ height: "60px", fontSize: "16px" }}
               >
                 No, individual item
+                {!isMovingSale && <Check className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setIsMovingSale(true)}
                 className={cn(
-                  "py-3 px-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 text-left",
+                  "flex items-center justify-between font-medium rounded-xl border-2 transition-all duration-200 text-left px-4",
                   isMovingSale
-                    ? "border-orange-400 bg-orange-50 text-orange-900 dark:bg-orange-950 dark:text-orange-200"
+                    ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-card text-foreground hover:border-primary/50"
                 )}
+                style={{ height: "60px", fontSize: "16px" }}
               >
                 Yes, moving soon
+                {isMovingSale && <Check className="w-5 h-5" />}
               </button>
             </div>
 
             {isMovingSale && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label className="text-base text-muted-foreground">
                     When are you moving? (optional)
                   </Label>
                   <Popover>
@@ -158,11 +163,12 @@ const ItemDetails = () => {
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full h-14 justify-start text-left font-normal rounded-xl",
+                          "w-full justify-start text-left font-normal rounded-xl",
                           !movingDate && "text-muted-foreground"
                         )}
+                        style={{ height: "60px", fontSize: "16px", padding: "20px 16px" }}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-5 w-5" />
                         {movingDate ? format(movingDate, "MMMM d, yyyy") : "e.g., March 15"}
                       </Button>
                     </PopoverTrigger>
@@ -177,13 +183,26 @@ const ItemDetails = () => {
                       />
                     </PopoverContent>
                   </Popover>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Helps buyers know your timeline
                   </p>
                 </div>
-                <p className="text-sm" style={{ color: "#F97316" }}>
-                  💡 Tip: Price 10-15% below market for quick moving sales
-                </p>
+
+                {/* Moving sale tip box */}
+                <div
+                  className="rounded-lg"
+                  style={{
+                    background: "#FFF7ED",
+                    padding: "16px",
+                    borderLeft: "4px solid #F97316",
+                    marginTop: "24px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <p style={{ color: "#9A3412" }}>
+                    💡 Tip: Price 10-15% below market for quick moving sales
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -191,12 +210,12 @@ const ItemDetails = () => {
       </div>
 
       {/* Continue button */}
-      <div className="p-4 border-t border-border">
+      <div className="px-6 pb-8 pt-4 border-t border-border">
         <Button
           onClick={handleContinue}
           disabled={!isValid}
-          size="lg"
-          className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50"
+          className="w-full font-semibold rounded-xl transition-all duration-300 ease-out disabled:opacity-50"
+          style={{ height: "60px", fontSize: "18px" }}
         >
           Continue to Pricing
         </Button>
