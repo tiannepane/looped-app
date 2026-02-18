@@ -1,9 +1,17 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { format, differenceInDays } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -66,6 +74,8 @@ const ItemDescription = () => {
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
   const [showPostalError, setShowPostalError] = useState(false);
+  const [isMovingSale, setIsMovingSale] = useState(false);
+  const [movingDate, setMovingDate] = useState<Date | undefined>(undefined);
 
   const suggestions = useMemo(() => generateSuggestions(title), [title]);
 
@@ -94,7 +104,15 @@ const ItemDescription = () => {
       return;
     }
     const locationDisplay = getLocationDisplay(postalCode);
-    navigate("/pricing", { state: { itemTitle: title, category, location: locationDisplay } });
+    navigate("/pricing", {
+      state: {
+        itemTitle: title,
+        category,
+        location: locationDisplay,
+        isMovingSale,
+        movingDate: movingDate ? movingDate.toISOString() : null,
+      },
+    });
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -208,6 +226,78 @@ const ItemDescription = () => {
             <p className="text-xs text-muted-foreground">
               ℹ️ We only show "{neighborhood ? `${neighborhood} (${postalCode.toUpperCase()})` : "King West (M5V)"}" to buyers to keep your privacy
             </p>
+          </div>
+
+          {/* Moving Sale Toggle */}
+          <div className="space-y-3 pt-1">
+            <Label className="text-sm font-medium">
+              🏠 Is this part of a moving sale?
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setIsMovingSale(false)}
+                className={cn(
+                  "py-3 px-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 text-left",
+                  !isMovingSale
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-foreground hover:border-primary/50"
+                )}
+              >
+                No, individual item
+              </button>
+              <button
+                onClick={() => setIsMovingSale(true)}
+                className={cn(
+                  "py-3 px-3 text-sm font-medium rounded-xl border-2 transition-all duration-200 text-left",
+                  isMovingSale
+                    ? "border-orange-400 bg-orange-50 text-orange-900 dark:bg-orange-950 dark:text-orange-200"
+                    : "border-border bg-card text-foreground hover:border-primary/50"
+                )}
+              >
+                Yes, moving soon
+              </button>
+            </div>
+
+            {/* Conditional: Moving date + tip */}
+            {isMovingSale && (
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    When are you moving? (optional)
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full h-14 justify-start text-left font-normal rounded-xl",
+                          !movingDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {movingDate ? format(movingDate, "MMMM d, yyyy") : "e.g., March 15"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={movingDate}
+                        onSelect={setMovingDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    Helps buyers know your timeline
+                  </p>
+                </div>
+                <p className="text-sm" style={{ color: "#F97316" }}>
+                  💡 Tip: Price 10-15% below market for quick sale
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Condition */}

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { format, parseISO } from "date-fns";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -43,7 +44,14 @@ const PlatformSelection = () => {
     category = "Other", 
     price = 100,
     location: itemLocation = "",
-  } = (location.state as { itemTitle?: string; category?: string; price?: number; location?: string }) || {};
+    isMovingSale = false,
+    movingDate = null,
+  } = (location.state as { itemTitle?: string; category?: string; price?: number; location?: string; isMovingSale?: boolean; movingDate?: string | null }) || {};
+
+  const movingDateDisplay = useMemo(() => {
+    if (!isMovingSale || !movingDate) return null;
+    return format(parseISO(movingDate), "MMM d");
+  }, [isMovingSale, movingDate]);
 
   const [enabled, setEnabled] = useState<Record<string, boolean>>({
     facebook: true,
@@ -135,6 +143,11 @@ const PlatformSelection = () => {
                 </h3>
                 {itemLocation && (
                   <p className="text-xs text-muted-foreground">📍 {itemLocation}</p>
+                )}
+                {isMovingSale && (
+                  <p className="text-xs text-muted-foreground">
+                    🏠 Moving sale{movingDateDisplay ? ` - must go by ${movingDateDisplay}` : ""}
+                  </p>
                 )}
                 <p className="text-primary font-bold">${price}</p>
                 <p className="text-xs text-muted-foreground mt-1">
