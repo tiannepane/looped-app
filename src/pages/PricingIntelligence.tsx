@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TrendingUp, Flame } from "lucide-react";
+import { TrendingUp, Flame, X } from "lucide-react";
+import { differenceInDays, parseISO, format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -81,7 +82,26 @@ const priceColorMap = {
 const PricingIntelligence = () => {
   const navigate = useNavigate();
   const loc = useLocation();
-  const { itemTitle = "item", category = "Other", location: itemLocation = "" } = (loc.state as { itemTitle?: string; category?: string; location?: string }) || {};
+  const {
+    itemTitle = "item",
+    category = "Other",
+    location: itemLocation = "",
+    isMovingSale = false,
+    movingDate = null,
+  } = (loc.state as { itemTitle?: string; category?: string; location?: string; isMovingSale?: boolean; movingDate?: string | null }) || {};
+
+  const [showMovingTip, setShowMovingTip] = useState(true);
+
+  const movingInfo = useMemo(() => {
+    if (!isMovingSale || !movingDate) return null;
+    const date = parseISO(movingDate);
+    const daysAway = differenceInDays(date, new Date());
+    const dateStr = format(date, "MMMM d");
+    let urgency = `That's ${daysAway} days away`;
+    if (daysAway <= 7) urgency = `That's only ${daysAway} days away — price aggressively!`;
+    if (daysAway <= 0) urgency = "Your move date has passed!";
+    return { dateStr, daysAway, urgency };
+  }, [isMovingSale, movingDate]);
 
   const data = useMemo(() => matchPricingData(itemTitle), [itemTitle]);
   const { quickPrice, fairPrice, patientPrice } = data;
@@ -120,6 +140,30 @@ const PricingIntelligence = () => {
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-5">
+          {/* Moving Sale Tip Banner */}
+          {isMovingSale && showMovingTip && (
+            <div className="relative rounded-xl border-l-4 p-4" style={{ backgroundColor: "#FFF7ED", borderLeftColor: "#F97316" }}>
+              <button
+                onClick={() => setShowMovingTip(false)}
+                className="absolute top-2 right-2 p-1 rounded-full hover:bg-orange-100 transition-colors"
+              >
+                <X className="w-4 h-4 text-orange-400" />
+              </button>
+              <h4 className="font-semibold text-sm mb-1" style={{ color: "#9A3412" }}>
+                💡 Moving Sale Pricing Tip
+              </h4>
+              <p className="text-sm" style={{ color: "#78350F" }}>
+                For urgent moving sales, we recommend the Quick Sale price (1-3 days) to guarantee fast turnover.
+              </p>
+              {movingInfo && (
+                <div className="mt-2 text-sm" style={{ color: "#9A3412" }}>
+                  <p>Your moving date: {movingInfo.dateStr}</p>
+                  <p className="font-medium">{movingInfo.urgency}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Market Insights */}
           <Card className="p-5 bg-card border-border">
             <div className="flex items-center gap-2 mb-3">
@@ -229,7 +273,7 @@ const PricingIntelligence = () => {
       {/* CTA */}
       <div className="p-4 border-t border-border">
         <Button
-          onClick={() => navigate("/platforms", { state: { itemTitle, category, price, location: itemLocation } })}
+          onClick={() => navigate("/platforms", { state: { itemTitle, category, price, location: itemLocation, isMovingSale, movingDate } })}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 ease-out"
         >
