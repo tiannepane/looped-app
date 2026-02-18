@@ -89,12 +89,13 @@ const PricingIntelligence = () => {
   const navigate = useNavigate();
   const loc = useLocation();
   const {
+    photos = [],
     itemTitle = "item",
     category = "Other",
     location: itemLocation = "",
     isMovingSale = false,
     movingDate = null,
-  } = (loc.state as { itemTitle?: string; category?: string; location?: string; isMovingSale?: boolean; movingDate?: string | null }) || {};
+  } = (loc.state as { photos?: string[]; itemTitle?: string; category?: string; location?: string; isMovingSale?: boolean; movingDate?: string | null }) || {};
 
   const [showMovingTip, setShowMovingTip] = useState(true);
 
@@ -278,7 +279,7 @@ const PricingIntelligence = () => {
       {/* CTA */}
       <div className="p-4 border-t border-border">
         <Button
-          onClick={() => navigate("/platforms", { state: { itemTitle, category, price, location: itemLocation, isMovingSale, movingDate } })}
+          onClick={() => navigate("/platforms", { state: { photos, itemTitle, category, price, location: itemLocation, isMovingSale, movingDate } })}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 ease-out"
         >

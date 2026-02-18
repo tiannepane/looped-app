@@ -28,6 +28,7 @@ const getCategoryImage = (category: string): string => {
 };
 
 interface NewListingState {
+  photos?: string[];
   itemTitle: string;
   category: string;
   price: number;
@@ -46,12 +47,12 @@ const Dashboard = () => {
   useEffect(() => {
     const state = location.state as { newListing?: NewListingState } | null;
     if (state?.newListing) {
-      const { itemTitle, category, price, platforms } = state.newListing;
+      const { photos, itemTitle, category, price, platforms } = state.newListing;
       const newItem: ListingItem = {
         id: `new-${Date.now()}`,
         title: itemTitle,
         price,
-        image: getCategoryImage(category),
+        image: photos && photos.length > 0 ? photos[0] : getCategoryImage(category),
         category,
         condition: "Like New",
         description: "",

@@ -40,13 +40,14 @@ const PlatformSelection = () => {
   
   // Get item data from navigation state
   const { 
+    photos = [],
     itemTitle = "Your Item", 
     category = "Other", 
     price = 100,
     location: itemLocation = "",
     isMovingSale = false,
     movingDate = null,
-  } = (location.state as { itemTitle?: string; category?: string; price?: number; location?: string; isMovingSale?: boolean; movingDate?: string | null }) || {};
+  } = (location.state as { photos?: string[]; itemTitle?: string; category?: string; price?: number; location?: string; isMovingSale?: boolean; movingDate?: string | null }) || {};
 
   const movingDateDisplay = useMemo(() => {
     if (!isMovingSale || !movingDate) return null;
@@ -90,6 +91,7 @@ const PlatformSelection = () => {
       navigate("/dashboard", { 
         state: { 
           newListing: {
+            photos,
             itemTitle,
             category,
             price,

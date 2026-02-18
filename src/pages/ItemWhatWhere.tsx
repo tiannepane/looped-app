@@ -60,6 +60,7 @@ const ItemWhatWhere = () => {
 
   const incoming = (location.state as Record<string, unknown>) || {};
 
+  const photos = (incoming.photos as string[]) || [];
   const [title, setTitle] = useState((incoming.title as string) || "");
   const [category, setCategory] = useState((incoming.category as string) || "");
   const [postalCode, setPostalCode] = useState((incoming.postalCode as string) || "");
@@ -92,13 +93,12 @@ const ItemWhatWhere = () => {
     }
     navigate("/details", {
       state: {
+        photos,
         title,
         category,
         postalCode,
         condition: incoming.condition || "",
         description: incoming.description || "",
-        isMovingSale: incoming.isMovingSale || false,
-        movingDate: incoming.movingDate || null,
       },
     });
   };

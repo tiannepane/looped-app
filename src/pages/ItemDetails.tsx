@@ -13,6 +13,7 @@ const ItemDetails = () => {
   const location = useLocation();
 
   const incoming = (location.state as Record<string, unknown>) || {};
+  const photos = (incoming.photos as string[]) || [];
   const title = (incoming.title as string) || "";
   const category = (incoming.category as string) || "";
   const postalCode = (incoming.postalCode as string) || "";
@@ -26,6 +27,7 @@ const ItemDetails = () => {
     const locationDisplay = getLocationDisplay(postalCode);
     navigate("/pricing", {
       state: {
+        photos,
         itemTitle: title,
         category,
         location: locationDisplay,
@@ -38,6 +40,7 @@ const ItemDetails = () => {
   const handleBack = () => {
     navigate("/description", {
       state: {
+        photos,
         title,
         category,
         postalCode,
