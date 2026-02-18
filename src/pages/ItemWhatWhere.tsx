@@ -196,9 +196,6 @@ const ItemWhatWhere = () => {
                 autoCapitalize="characters"
                 className="h-14 w-[100px] rounded-xl text-xl font-semibold text-center tracking-widest uppercase"
               />
-              <p className="text-xs text-muted-foreground">
-                Example: M5V, M4E, M6G
-              </p>
             </div>
 
             {postalValid && neighborhood && (
@@ -215,10 +212,6 @@ const ItemWhatWhere = () => {
                 Please enter first 3 characters of your Toronto postal code (e.g., M5V)
               </p>
             )}
-
-            <p className="text-xs text-muted-foreground">
-              ℹ️ We only show "{neighborhood ? `${neighborhood} (${postalCode.toUpperCase()})` : "King West (M5V)"}" to buyers to keep your privacy
-            </p>
           </div>
         </div>
       </div>
