@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Minus, Plus, TrendingUp, Flame } from "lucide-react";
+import { Minus, Plus, TrendingUp, Flame, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -33,7 +33,6 @@ const getPricingData = (itemTitle: string, category: string) => {
     ikea: { min: 50, max: 180, avg: 120, searches: 32 },
   };
 
-  // Find matching keyword
   for (const [keyword, data] of Object.entries(pricingMap)) {
     if (lower.includes(keyword)) {
       return {
@@ -45,7 +44,6 @@ const getPricingData = (itemTitle: string, category: string) => {
     }
   }
 
-  // Category-based fallback
   const categoryFallback: Record<string, { min: number; max: number; avg: number; searches: number }> = {
     Furniture: { min: 100, max: 300, avg: 180, searches: 15 },
     Electronics: { min: 150, max: 500, avg: 300, searches: 28 },
@@ -63,37 +61,71 @@ const getPricingData = (itemTitle: string, category: string) => {
   };
 };
 
+type TierId = "quick" | "fair" | "patient" | "custom";
+
 const PricingIntelligence = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { itemTitle = "item", category = "Other" } = (location.state as { itemTitle?: string; category?: string }) || {};
 
   const pricingData = useMemo(() => getPricingData(itemTitle, category), [itemTitle, category]);
-  const [price, setPrice] = useState(pricingData.average);
+
+  const tiers = useMemo(() => {
+    const avg = pricingData.average;
+    return [
+      {
+        id: "quick" as TierId,
+        icon: "🏃",
+        label: "Quick Sale",
+        tag: "RECOMMENDED",
+        price: Math.round(avg * 0.9),
+        timeline: "Likely sells in 1-3 days",
+        description: "Best for urgent moves",
+      },
+      {
+        id: "fair" as TierId,
+        icon: "⚖️",
+        label: "Fair Price",
+        price: avg,
+        timeline: "Likely sells in 3-7 days",
+        description: "Balanced approach",
+      },
+      {
+        id: "patient" as TierId,
+        icon: "💰",
+        label: "Patient Sale",
+        price: Math.round(avg * 1.1),
+        timeline: "Likely sells in 7-14 days",
+        description: "Maximize profit",
+      },
+    ];
+  }, [pricingData]);
+
+  const [selectedTier, setSelectedTier] = useState<TierId>("quick");
+  const [customPrice, setCustomPrice] = useState(pricingData.average);
+
+  const selectedPrice = useMemo(() => {
+    if (selectedTier === "custom") return customPrice;
+    return tiers.find((t) => t.id === selectedTier)?.price ?? pricingData.average;
+  }, [selectedTier, customPrice, tiers, pricingData]);
+
+  const customTimeline = useMemo(() => {
+    const { average } = pricingData;
+    if (customPrice <= average * 0.85) return "Likely sells within 1 day";
+    if (customPrice <= average * 0.95) return "Likely sells in 1-3 days";
+    if (customPrice <= average * 1.05) return "Likely sells in 3-7 days";
+    if (customPrice <= average * 1.15) return "Likely sells in 7-14 days";
+    return "May take 2+ weeks to sell";
+  }, [customPrice, pricingData]);
 
   const adjustPrice = (amount: number) => {
-    setPrice((prev) => Math.max(10, prev + amount));
+    setSelectedTier("custom");
+    setCustomPrice((prev) => Math.max(10, prev + amount));
   };
-
-  const timeline = useMemo(() => {
-    const { average } = pricingData;
-    if (price <= average - 30) return "Likely sells within 1 day";
-    if (price <= average - 10) return "Likely sells in 1-2 days";
-    if (price <= average + 10) return "Likely sells in 2-3 days";
-    if (price <= average + 30) return "Likely sells in 4-7 days";
-    return "May take 1-2 weeks to sell";
-  }, [price, pricingData]);
-
-  const priceColor = useMemo(() => {
-    const { average } = pricingData;
-    if (price <= average - 20) return "text-success";
-    if (price >= average + 20) return "text-destructive";
-    return "text-primary";
-  }, [price, pricingData]);
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <ScreenHeader title="Set Your Price" />
+      <ScreenHeader title="Smart Pricing for Quick Sales" />
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-5">
@@ -130,10 +162,54 @@ const PricingIntelligence = () => {
             </div>
           </Card>
 
-          {/* Price input */}
-          <div className="py-6">
+          {/* Pricing tier cards */}
+          <div className="space-y-3">
+            {tiers.map((tier) => {
+              const isSelected = selectedTier === tier.id;
+              return (
+                <Card
+                  key={tier.id}
+                  onClick={() => setSelectedTier(tier.id)}
+                  className={`p-4 cursor-pointer transition-all duration-200 border-2 ${
+                    isSelected
+                      ? tier.id === "quick"
+                        ? "border-green-500 bg-green-500/5 shadow-md"
+                        : "border-primary bg-primary/5 shadow-md"
+                      : tier.id === "quick"
+                        ? "border-green-500/30 bg-card hover:border-green-500/60"
+                        : "border-border bg-card hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">{tier.icon}</span>
+                        <span className="font-semibold text-foreground">{tier.label}</span>
+                        {tier.tag && (
+                          <span className="text-[10px] font-bold bg-green-500/15 text-green-600 px-2 py-0.5 rounded-full uppercase">
+                            {tier.tag}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-2xl font-bold text-foreground mb-1">${tier.price}</p>
+                      <p className="text-sm text-muted-foreground">{tier.timeline}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{tier.description}</p>
+                    </div>
+                    {isSelected && (
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-1">
+                        <Check className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Custom price section */}
+          <div className="pt-2">
             <p className="text-sm text-muted-foreground text-center mb-4">
-              Your price
+              Or set your own price
             </p>
             <div className="flex items-center justify-center gap-4">
               <button
@@ -142,8 +218,12 @@ const PricingIntelligence = () => {
               >
                 <Minus className="w-6 h-6 text-foreground" />
               </button>
-              <div className={`text-5xl font-bold ${priceColor} transition-colors duration-200`}>
-                ${price}
+              <div
+                className={`text-5xl font-bold transition-colors duration-200 ${
+                  selectedTier === "custom" ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                ${customPrice}
               </div>
               <button
                 onClick={() => adjustPrice(10)}
@@ -152,33 +232,23 @@ const PricingIntelligence = () => {
                 <Plus className="w-6 h-6 text-foreground" />
               </button>
             </div>
-          </div>
-
-          {/* Timeline prediction */}
-          <Card className="p-4 bg-muted border-border text-center">
-            <p className="text-sm text-muted-foreground">At this price:</p>
-            <p className="text-base font-semibold text-foreground mt-1">
-              {timeline}
-            </p>
-          </Card>
-
-          {/* Commission reminder */}
-          <div className="bg-secondary/50 rounded-xl px-4 py-3">
-            <p className="text-xs text-muted-foreground text-center">
-              💰 You'll receive <span className="font-semibold text-foreground">${Math.round(price * 0.95)}</span> after Looped's 5% fee
-            </p>
+            {selectedTier === "custom" && (
+              <p className="text-sm text-muted-foreground text-center mt-3">
+                At ${customPrice}: {customTimeline}
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Continue button - bright orange */}
+      {/* Continue button */}
       <div className="p-4 border-t border-border">
         <Button
-          onClick={() => navigate("/platforms", { state: { itemTitle, category, price } })}
+          onClick={() => navigate("/platforms", { state: { itemTitle, category, price: selectedPrice } })}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 ease-out"
         >
-          Continue to Post
+          Post at ${selectedPrice}
         </Button>
       </div>
     </div>

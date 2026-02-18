@@ -144,11 +144,7 @@ const Dashboard = () => {
                   </div>
                   {listing.isSold && listing.soldPrice ? (
                     <div className="mt-1">
-                      <p className="text-success font-bold">${listing.soldPrice}</p>
-                      <p className="text-xs text-muted-foreground">
-                        You earned: <span className="font-medium text-foreground">${Math.round(listing.soldPrice * 0.95)}</span>
-                        <span className="text-muted-foreground/70"> (5% fee: ${Math.round(listing.soldPrice * 0.05)})</span>
-                      </p>
+                      <p className="text-success font-bold">Sold for: ${listing.soldPrice}</p>
                     </div>
                   ) : (
                     <p className="text-primary font-bold">${listing.price}</p>

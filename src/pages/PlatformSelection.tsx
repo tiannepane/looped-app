@@ -98,7 +98,7 @@ const PlatformSelection = () => {
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
           <p className="text-sm text-muted-foreground">
-            Where should we post this?
+            Where should we list this?
           </p>
 
           {/* Platform toggles */}
@@ -145,10 +145,10 @@ const PlatformSelection = () => {
             </div>
           </Card>
 
-          {/* Commission disclosure */}
+          {/* Subscription disclosure */}
           <div className="bg-muted/50 rounded-xl px-4 py-3">
             <p className="text-xs text-muted-foreground text-center">
-              💰 Looped takes a <span className="font-medium text-foreground">5% fee</span> only when your item sells
+              💡 First 3 listings free. Upgrade to unlimited for <span className="font-medium text-foreground">$5/30 days</span>.
             </p>
           </div>
         </div>
