@@ -201,12 +201,12 @@ const ItemWhatWhere = () => {
               </p>
             </div>
 
-            {postalValid && (
+            {postalValid && neighborhood && (
               <p
                 className="text-sm font-medium transition-all duration-200"
                 style={{ color: "#10B981" }}
               >
-                ✓ This is in {neighborhood || `${postalCode.toUpperCase()} area`}
+                ✓ This is in {neighborhood}
               </p>
             )}
 
