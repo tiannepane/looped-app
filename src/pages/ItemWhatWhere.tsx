@@ -112,15 +112,15 @@ const ItemWhatWhere = () => {
       <ScreenHeader title="Item Details (1/2)" />
 
       {/* Progress dots */}
-      <div className="flex justify-center gap-4 py-3">
+      <div className="flex justify-center gap-4 py-2">
         <div className="w-2 h-2 rounded-full bg-primary" />
         <div className="w-2 h-2 rounded-full bg-muted" />
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col">
-        <div className="flex-1 px-6 flex flex-col" style={{ gap: "40px", paddingTop: "16px" }}>
+        <div className="flex-1 px-6 flex flex-col" style={{ gap: "20px", paddingTop: "12px" }}>
           {/* Title */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex justify-between items-center">
               <Label htmlFor="title" className="text-lg font-bold">
                 What are you selling?
@@ -135,13 +135,13 @@ const ItemWhatWhere = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 60))}
               className="rounded-xl"
-              style={{ height: "60px", fontSize: "16px", padding: "20px 16px" }}
+              style={{ height: "52px", fontSize: "16px", padding: "16px" }}
             />
           </div>
 
           {/* AI Suggestions */}
           {suggestions.length > 0 && (
-            <div className="space-y-2 -mt-5">
+            <div className="space-y-1 -mt-3">
               <Label className="text-sm text-muted-foreground">
                 ✨ AI suggestions
               </Label>
@@ -160,12 +160,12 @@ const ItemWhatWhere = () => {
           )}
 
           {/* Category */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label className="text-lg font-bold">Category</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger
                 className="rounded-xl"
-                style={{ height: "60px", fontSize: "16px", padding: "20px 16px" }}
+                style={{ height: "52px", fontSize: "16px", padding: "16px" }}
               >
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -180,7 +180,7 @@ const ItemWhatWhere = () => {
           </div>
 
           {/* Location — Postal Code */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label className="text-lg font-bold">
               Where is this located?
             </Label>
@@ -197,13 +197,13 @@ const ItemWhatWhere = () => {
                 maxLength={3}
                 autoCapitalize="characters"
                 className="rounded-xl font-semibold text-center uppercase"
-                style={{ height: "70px", width: "120px", fontSize: "24px", letterSpacing: "4px" }}
+                style={{ height: "60px", width: "120px", fontSize: "24px", letterSpacing: "4px" }}
               />
             </div>
 
             {postalValid && neighborhood && (
               <p
-                className="text-lg font-medium transition-all duration-200 my-4"
+                className="text-base font-medium transition-all duration-200"
                 style={{ color: "#10B981" }}
               >
                 ✓ This is in {neighborhood}
@@ -220,12 +220,12 @@ const ItemWhatWhere = () => {
       </div>
 
       {/* Next button */}
-      <div className="px-6 pb-8 pt-4 border-t border-border">
+      <div className="px-6 pb-6 pt-3 border-t border-border">
         <Button
           onClick={handleNext}
           disabled={!isValid}
           className="w-full font-semibold rounded-xl transition-all duration-300 ease-out disabled:opacity-50"
-          style={{ height: "60px", fontSize: "18px" }}
+          style={{ height: "52px", fontSize: "18px" }}
         >
           Next
         </Button>
