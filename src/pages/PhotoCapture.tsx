@@ -10,13 +10,21 @@ const PhotoCapture = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [showAiBadge, setShowAiBadge] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newPhotos = Array.from(files).map((file) =>
-        URL.createObjectURL(file)
+      const base64Photos = await Promise.all(
+        Array.from(files).map((file) => fileToBase64(file))
       );
-      const updatedPhotos = [...photos, ...newPhotos].slice(0, 5);
+      const updatedPhotos = [...photos, ...base64Photos].slice(0, 5);
       setPhotos(updatedPhotos);
       
       // Show AI badge after first photo
@@ -143,7 +151,7 @@ const PhotoCapture = () => {
 
         {/* Next button */}
         <Button
-          onClick={() => navigate("/description")}
+          onClick={() => navigate("/description", { state: { photos } })}
           disabled={photos.length === 0}
           size="lg"
           className="w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 ease-out disabled:opacity-50"
