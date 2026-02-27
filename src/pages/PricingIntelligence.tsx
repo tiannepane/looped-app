@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { BarChart3 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -27,23 +26,34 @@ const matchPricingData = (itemTitle: string) => {
   return mockPricingData.default;
 };
 
-const getPriceZone = (price: number, quick: number, patient: number) => {
-  const greenThreshold = quick + (patient - quick) * 0.1;
-  if (price <= greenThreshold) return "green";
-  if (price <= patient) return "orange";
-  return "red";
-};
+const getZoneInfo = (price: number, quick: number, fair: number, patient: number) => {
+  const range = patient - quick;
+  const lowThreshold = quick + range * 0.33;
+  const highThreshold = quick + range * 0.67;
 
-const getTimeline = (price: number, quick: number, fair: number, patient: number) => {
-  if (price <= quick) return "1-3 days";
-  const greenThreshold = quick + (patient - quick) * 0.1;
-  if (price <= greenThreshold) return "1-3 days";
-  if (price <= fair) return "3-7 days";
-  if (price <= patient) return "5-10 days";
-  return "10-14+ days";
+  if (price <= lowThreshold) {
+    return {
+      color: "#10B981",
+      timeline: "1-3 days",
+      badge: "✓ Priced for quick sale",
+      tip: "💡 Priced 10% below average for fast sale. Great for urgent moves.",
+    };
+  }
+  if (price <= highThreshold) {
+    return {
+      color: "#F97316",
+      timeline: "3-7 days",
+      badge: "✓ Recommended Price — Balanced approach",
+      tip: "💡 Priced at market average. Balanced speed and profit.",
+    };
+  }
+  return {
+    color: "#EF4444",
+    timeline: "7-14 days",
+    badge: "⚠️ Priced above market — May take longer",
+    tip: "💡 Priced 10% above average. Maximizes profit but may take longer.",
+  };
 };
-
-const priceColorMap = { green: "#10B981", orange: "#F59E0B", red: "#EF4444" };
 
 const PricingIntelligence = () => {
   const navigate = useNavigate();
@@ -63,8 +73,7 @@ const PricingIntelligence = () => {
 
   const [price, setPrice] = useState(fairPrice);
 
-  const zone = useMemo(() => getPriceZone(price, quickPrice, patientPrice), [price, quickPrice, patientPrice]);
-  const timeline = useMemo(() => getTimeline(price, quickPrice, fairPrice, patientPrice), [price, quickPrice, fairPrice, patientPrice]);
+  const zone = useMemo(() => getZoneInfo(price, quickPrice, fairPrice, patientPrice), [price, quickPrice, fairPrice, patientPrice]);
 
   const handleSliderChange = useCallback((val: number[]) => {
     const v = val[0];
@@ -82,83 +91,111 @@ const PricingIntelligence = () => {
     <div className="h-full flex flex-col bg-background">
       <ScreenHeader title="Smart Pricing" />
 
-      <div className="flex-1 flex flex-col px-4 pt-4">
-        {/* Compact market data card */}
-        <Card className="p-4 bg-card border-border mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className="w-4 h-4 text-primary" />
-            <span className="font-semibold text-sm text-foreground">Market Data</span>
+      <div className="flex-1 flex flex-col px-6 pt-4 overflow-y-auto">
+        {/* Market Data */}
+        <Card className="p-4 bg-card border-border" style={{ marginBottom: "24px" }}>
+          <div className="flex items-center gap-2" style={{ marginBottom: "8px" }}>
+            <span style={{ fontSize: "18px" }}>📊</span>
+            <span className="font-bold text-foreground" style={{ fontSize: "16px" }}>Market Data</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
             Similar items: <span className="font-semibold text-foreground">${data.marketLow} – ${data.marketHigh}</span>
           </p>
-          <p className="text-sm text-muted-foreground">
-            Average: <span className="font-semibold text-primary">${data.average}</span>
+          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
+            Average: <span className="font-semibold" style={{ color: "#F97316" }}>${data.average}</span>
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
             {data.searches} people searched this week
           </p>
         </Card>
 
-        {/* Slider section */}
-        <div className="space-y-4 flex-1">
-          <p className="text-center font-semibold text-foreground">Set Your Price</p>
+        {/* Slider Section */}
+        <p className="text-center font-bold text-foreground" style={{ fontSize: "18px", marginBottom: "16px" }}>
+          Choose Your Speed
+        </p>
 
-          <div className="flex justify-between text-sm font-medium text-muted-foreground px-1">
-            <span>Fast Sale</span>
-            <span>Max Profit</span>
+        <div className="flex justify-between px-1" style={{ fontSize: "14px", color: "hsl(var(--muted-foreground))", marginBottom: "8px" }}>
+          <span>Fast Sale</span>
+          <span>Max Profit</span>
+        </div>
+
+        <div className="px-1">
+          <Slider
+            value={[sliderValue]}
+            min={quickPrice}
+            max={patientPrice}
+            step={1}
+            onValueChange={handleSliderChange}
+            className="w-full"
+          />
+        </div>
+
+        {/* Price markers */}
+        <div className="flex justify-between text-center px-1" style={{ marginTop: "8px", marginBottom: "32px" }}>
+          <div className="flex flex-col items-start">
+            <span className={`font-semibold ${price === quickPrice ? "text-foreground" : "text-muted-foreground"}`} style={{ fontSize: "14px" }}>
+              ${quickPrice}
+            </span>
+            <span className="text-muted-foreground" style={{ fontSize: "12px" }}>1-3 days</span>
           </div>
-
-          <div className="px-1">
-            <Slider
-              value={[sliderValue]}
-              min={quickPrice}
-              max={patientPrice}
-              step={1}
-              onValueChange={handleSliderChange}
-              className="w-full"
-            />
+          <div className="flex flex-col items-center">
+            <span className={`font-semibold ${price === fairPrice ? "text-foreground" : "text-muted-foreground"}`} style={{ fontSize: "14px" }}>
+              ${fairPrice}
+            </span>
+            <span className="text-muted-foreground" style={{ fontSize: "12px" }}>3-7 days</span>
           </div>
-
-          {/* Marker labels */}
-          <div className="flex justify-between text-center px-1">
-            <div className="flex flex-col items-start">
-              <span className={`text-sm font-semibold ${price === quickPrice ? "text-primary" : "text-muted-foreground"}`}>
-                ${quickPrice}
-              </span>
-              <span className="text-xs text-muted-foreground">1-3 days</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className={`text-sm font-semibold ${price === fairPrice ? "text-primary" : "text-muted-foreground"}`}>
-                ${fairPrice}
-              </span>
-              <span className="text-xs text-muted-foreground">3-7 days</span>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className={`text-sm font-semibold ${price === patientPrice ? "text-primary" : "text-muted-foreground"}`}>
-                ${patientPrice}
-              </span>
-              <span className="text-xs text-muted-foreground">7-14 days</span>
-            </div>
-          </div>
-
-          {/* Price display */}
-          <div className="text-center space-y-1 py-4">
-            <p className="text-5xl font-bold transition-colors duration-200" style={{ color: priceColorMap[zone] }}>
-              ${price}
-            </p>
-            <p className="text-sm text-muted-foreground">Sells in {timeline}</p>
+          <div className="flex flex-col items-end">
+            <span className={`font-semibold ${price === patientPrice ? "text-foreground" : "text-muted-foreground"}`} style={{ fontSize: "14px" }}>
+              ${patientPrice}
+            </span>
+            <span className="text-muted-foreground" style={{ fontSize: "12px" }}>7-14 days</span>
           </div>
         </div>
+
+        {/* Large price display */}
+        <div className="text-center" style={{ marginBottom: "24px" }}>
+          <p className="font-bold transition-colors duration-200" style={{ fontSize: "56px", color: zone.color, lineHeight: 1.1 }}>
+            ${price}
+          </p>
+          <p className="text-muted-foreground" style={{ fontSize: "16px", marginTop: "4px" }}>
+            Sells in {zone.timeline}
+          </p>
+        </div>
+
+        {/* Confidence badge */}
+        <div
+          className="mx-auto text-center"
+          style={{
+            background: "#FFF7ED",
+            border: "1px solid #F97316",
+            borderRadius: "8px",
+            padding: "12px",
+            width: "90%",
+            marginBottom: "16px",
+            fontSize: "14px",
+            fontWeight: 500,
+          }}
+        >
+          {zone.badge}
+        </div>
+
+        {/* Context text */}
+        <p
+          className="mx-auto text-center text-muted-foreground"
+          style={{ fontSize: "14px", maxWidth: "85%", marginBottom: "40px" }}
+        >
+          {zone.tip}
+        </p>
       </div>
 
       {/* CTA */}
-      <div className="p-4 border-t border-border">
+      <div style={{ padding: "0 24px 24px" }}>
         <Button
           onClick={() => navigate("/platforms", {
             state: { photos, itemTitle, category, price, location: itemLocation, description, isMovingSale, movingDate },
           })}
-          className="w-full h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-none"
+          className="w-full font-semibold text-primary-foreground shadow-none"
+          style={{ height: "60px", fontSize: "18px", borderRadius: "12px", background: "#F97316" }}
         >
           Continue →
         </Button>
