@@ -35,23 +35,26 @@ const getZoneInfo = (price: number, quick: number, fair: number, patient: number
     return {
       color: "#10B981",
       timeline: "1-3 days",
-      badge: "✓ Priced for quick sale",
-      tip: "💡 Priced 10% below average for fast sale. Great for urgent moves.",
+      tipIcon: "⚡",
+      tipHeading: "Fast sale pricing",
+      tipText: "Great for moving sales or urgent listings. Sells quickly.",
     };
   }
   if (price <= highThreshold) {
     return {
       color: "#F97316",
       timeline: "3-7 days",
-      badge: "✓ Recommended Price — Balanced approach",
-      tip: "💡 Priced at market average. Balanced speed and profit.",
+      tipIcon: "✓",
+      tipHeading: "Balanced pricing",
+      tipText: "Recommended approach. Good mix of speed and profit.",
     };
   }
   return {
     color: "#EF4444",
     timeline: "7-14 days",
-    badge: "⚠️ Priced above market — May take longer",
-    tip: "💡 Priced 10% above average. Maximizes profit but may take longer.",
+    tipIcon: "💰",
+    tipHeading: "Patient pricing",
+    tipText: "Maximize profit. Best if you're not in a rush.",
   };
 };
 
@@ -152,6 +155,16 @@ const PricingIntelligence = () => {
           </p>
           <p className="text-muted-foreground" style={{ fontSize: "16px", marginTop: "4px" }}>
             Sells in {zone.timeline}
+          </p>
+        </div>
+
+        {/* Dynamic pricing tip */}
+        <div style={{ background: "#FFF7ED", borderRadius: "12px", padding: "16px", margin: "24px 0" }}>
+          <p className="font-bold text-foreground" style={{ fontSize: "15px", marginBottom: "4px" }}>
+            {zone.tipIcon} {zone.tipHeading}
+          </p>
+          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
+            {zone.tipText}
           </p>
         </div>
 
