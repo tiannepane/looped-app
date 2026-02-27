@@ -5,6 +5,21 @@ import BottomNav from "@/components/BottomNav";
 const Home = () => {
   const navigate = useNavigate();
 
+  const isLoggedIn = (() => {
+    try {
+      const auth = JSON.parse(localStorage.getItem("looped_auth") || "{}");
+      return auth.loggedIn === true;
+    } catch { return false; }
+  })();
+
+  const handleGetStarted = () => {
+    if (isLoggedIn) {
+      navigate("/photo");
+    } else {
+      navigate("/login");
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="flex-1 flex flex-col items-center justify-center px-8 pb-20">
@@ -42,9 +57,17 @@ const Home = () => {
           Know the right price in 30 seconds
         </p>
 
+        {/* Login link */}
+        {!isLoggedIn && (
+          <p className="text-sm text-muted-foreground mb-4">
+            Already have an account?{" "}
+            <button onClick={() => navigate("/login")} className="text-primary font-semibold hover:underline">Log In</button>
+          </p>
+        )}
+
         {/* CTA */}
         <Button
-          onClick={() => navigate("/photo")}
+          onClick={handleGetStarted}
           className="w-full max-w-xs h-14 text-lg font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-none transition-all duration-300"
         >
           Get Started
