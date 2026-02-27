@@ -19,7 +19,8 @@ const ItemDetails = () => {
   const postalCode = (incoming.postalCode as string) || "";
 
   const [condition, setCondition] = useState((incoming.condition as string) || "");
-  const [description, setDescription] = useState((incoming.description as string) || "");
+  const defaultTemplate = "Size:\n\nCondition:\n\nMust be gone by:\n\nAdditional details:";
+  const [description, setDescription] = useState((incoming.description as string) || defaultTemplate);
 
   const isValid = condition.length > 0;
 
@@ -106,7 +107,7 @@ const ItemDetails = () => {
               style={{ height: "140px", fontSize: "16px", padding: "16px" }}
             />
             <p style={{ fontSize: "14px", color: "#F97316", marginTop: "12px" }}>
-              💡 Tip: "Moving sale - must go by March 15" creates urgency
+              💡 Tip: Fill in the template or write your own description
             </p>
           </div>
         </div>
