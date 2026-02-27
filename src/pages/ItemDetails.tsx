@@ -22,7 +22,8 @@ const ItemDetails = () => {
   const defaultTemplate = "Size:\n\nCondition:\n\nMust be gone by:\n\nAdditional details:";
   const [description, setDescription] = useState((incoming.description as string) || defaultTemplate);
 
-  const isValid = condition.length > 0;
+  const descriptionFilled = description.trim().length > 0 && description.trim() !== defaultTemplate.trim();
+  const isValid = condition.length > 0 && descriptionFilled;
 
   const handleContinue = () => {
     const locationDisplay = getLocationDisplay(postalCode);
@@ -92,7 +93,7 @@ const ItemDetails = () => {
           <div>
             <div className="flex justify-between items-center" style={{ marginBottom: "12px" }}>
               <Label htmlFor="description" style={{ fontSize: "16px", fontWeight: 500 }}>
-                Description <span className="text-muted-foreground font-normal" style={{ fontSize: "16px" }}>(optional)</span>
+                Description <span className="text-destructive" style={{ fontSize: "16px" }}>*</span>
               </Label>
               <span className="text-muted-foreground" style={{ fontSize: "14px" }}>
                 {description.length}/500
