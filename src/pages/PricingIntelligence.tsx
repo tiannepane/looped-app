@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -91,23 +91,16 @@ const PricingIntelligence = () => {
     <div className="h-full flex flex-col bg-background">
       <ScreenHeader title="Smart Pricing" />
 
-      <div className="flex-1 flex flex-col px-6 pt-4 overflow-y-auto">
-        {/* Market Data */}
-        <Card className="p-4 bg-card border-border" style={{ marginBottom: "24px" }}>
-          <div className="flex items-center gap-2" style={{ marginBottom: "8px" }}>
-            <span style={{ fontSize: "18px" }}>📊</span>
-            <span className="font-bold text-foreground" style={{ fontSize: "16px" }}>Market Data</span>
-          </div>
-          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
-            Similar items: <span className="font-semibold text-foreground">${data.marketLow} – ${data.marketHigh}</span>
+      <div className="flex-1 flex flex-col px-6 pt-4">
+        {/* Market Data - simple centered text */}
+        <div className="text-center" style={{ marginBottom: "24px" }}>
+          <p className="font-bold text-foreground" style={{ fontSize: "16px" }}>
+            Market average: <span style={{ color: "#F97316" }}>${data.average}</span>
           </p>
           <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
-            Average: <span className="font-semibold" style={{ color: "#F97316" }}>${data.average}</span>
+            Similar items: ${data.marketLow} – ${data.marketHigh}
           </p>
-          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
-            {data.searches} people searched this week
-          </p>
-        </Card>
+        </div>
 
         {/* Slider Section */}
         <p className="text-center font-bold text-foreground" style={{ fontSize: "18px", marginBottom: "16px" }}>
@@ -162,30 +155,6 @@ const PricingIntelligence = () => {
           </p>
         </div>
 
-        {/* Confidence badge */}
-        <div
-          className="mx-auto text-center"
-          style={{
-            background: "#FFF7ED",
-            border: "1px solid #F97316",
-            borderRadius: "8px",
-            padding: "12px",
-            width: "90%",
-            marginBottom: "16px",
-            fontSize: "14px",
-            fontWeight: 500,
-          }}
-        >
-          {zone.badge}
-        </div>
-
-        {/* Context text */}
-        <p
-          className="mx-auto text-center text-muted-foreground"
-          style={{ fontSize: "14px", maxWidth: "85%", marginBottom: "40px" }}
-        >
-          {zone.tip}
-        </p>
       </div>
 
       {/* CTA */}
