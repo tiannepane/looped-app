@@ -48,8 +48,7 @@ export const getLocationDisplay = (postalCode: string): string => {
 export const isValidPostalPrefix = (value: string): boolean => {
   const code = value.toUpperCase().replace(/\s/g, "");
   if (code.length !== 3) return false;
-  if (code[0] !== "M") return false;
-  if (!/\d/.test(code[1])) return false;
-  if (!/[A-Z]/.test(code[2])) return false;
-  return true;
+  const letters = (code.match(/[A-Z]/g) || []).length;
+  const digits = (code.match(/\d/g) || []).length;
+  return letters >= 2 && digits >= 1;
 };
