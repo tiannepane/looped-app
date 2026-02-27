@@ -4,14 +4,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MobileFrame from "./components/MobileFrame";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Home from "./pages/Home";
 import PhotoCapture from "./pages/PhotoCapture";
 import ItemWhatWhere from "./pages/ItemWhatWhere";
 import ItemDetails from "./pages/ItemDetails";
 import PricingIntelligence from "./pages/PricingIntelligence";
-import PlatformSelection from "./pages/PlatformSelection";
+import PostToPlatforms from "./pages/PostToPlatforms";
 import Dashboard from "./pages/Dashboard";
-// Inbox removed — out of scope for MVP
 import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
 
@@ -26,15 +27,15 @@ const App = () => (
         <MobileFrame>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/photo" element={<PhotoCapture />} />
             <Route path="/description" element={<ItemWhatWhere />} />
             <Route path="/details" element={<ItemDetails />} />
             <Route path="/pricing" element={<PricingIntelligence />} />
-            <Route path="/platforms" element={<PlatformSelection />} />
+            <Route path="/platforms" element={<PostToPlatforms />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* Inbox route removed — MVP */}
             <Route path="/account" element={<Account />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </MobileFrame>

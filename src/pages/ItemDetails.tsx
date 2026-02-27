@@ -31,6 +31,7 @@ const ItemDetails = () => {
         itemTitle: title,
         category,
         location: locationDisplay,
+        description,
         isMovingSale: false,
         movingDate: null,
       },

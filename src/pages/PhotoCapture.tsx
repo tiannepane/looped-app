@@ -24,7 +24,7 @@ const PhotoCapture = () => {
       const base64Photos = await Promise.all(
         Array.from(files).map((file) => fileToBase64(file))
       );
-      const updatedPhotos = [...photos, ...base64Photos].slice(0, 5);
+      const updatedPhotos = [...photos, ...base64Photos].slice(0, 3);
       setPhotos(updatedPhotos);
       
       // Show AI badge after first photo
@@ -68,7 +68,7 @@ const PhotoCapture = () => {
                 Tap to add photos
               </span>
               <span className="text-xs text-muted-foreground">
-                Up to 5 photos
+                Up to 3 photos
               </span>
             </button>
           ) : (
@@ -90,7 +90,7 @@ const PhotoCapture = () => {
               )}
 
               {/* Add more button */}
-              {photos.length < 5 && (
+              {photos.length < 3 && (
                 <button
                   onClick={handleAddPhoto}
                   className="absolute top-4 right-4 w-10 h-10 bg-card/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-card transition-colors"
@@ -123,7 +123,7 @@ const PhotoCapture = () => {
                 </button>
               </div>
             ))}
-            {photos.length < 5 && (
+            {photos.length < 3 && (
               <button
                 onClick={handleAddPhoto}
                 className="flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors"
@@ -136,7 +136,7 @@ const PhotoCapture = () => {
 
         {/* Photo count */}
         <p className="text-center text-sm text-muted-foreground mb-4">
-          {photos.length}/5 photos added
+          {photos.length}/3 photos added
         </p>
 
         {/* Hidden file input */}

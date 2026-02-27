@@ -170,10 +170,16 @@ const Dashboard = () => {
                       </>
                     )}
                   </div>
-                  <div className="flex gap-1 mt-1.5">
-                    {listing.platforms.includes("facebook") && <span className="text-xs">📘</span>}
-                    {listing.platforms.includes("kijiji") && <span className="text-xs">🟣</span>}
-                    {listing.platforms.includes("carrot") && <span className="text-xs">🥕</span>}
+                  <div className="flex gap-1.5 mt-1.5">
+                    {listing.platforms.includes("facebook") && (
+                      <span className="w-5 h-5 rounded bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">f</span>
+                    )}
+                    {listing.platforms.includes("kijiji") && (
+                      <span className="w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">K</span>
+                    )}
+                    {(listing.platforms.includes("carrot") || listing.platforms.includes("karrot")) && (
+                      <span className="text-sm">🥕</span>
+                    )}
                   </div>
                 </div>
               </Card>
