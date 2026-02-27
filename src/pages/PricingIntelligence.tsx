@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { getLocationDisplay } from "@/lib/postalCodeMap";
 
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,8 @@ const PricingIntelligence = () => {
     movingDate = null,
   } = (loc.state as Record<string, any>) || {};
 
+  const locationDisplay = useMemo(() => getLocationDisplay(itemLocation), [itemLocation]);
+
   const data = useMemo(() => matchPricingData(itemTitle), [itemTitle]);
   const { quickPrice, fairPrice, patientPrice } = data;
 
@@ -101,7 +104,7 @@ const PricingIntelligence = () => {
             Market average: <span style={{ color: "#F97316" }}>${data.average}</span>
           </p>
           <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
-            Similar items: ${data.marketLow} – ${data.marketHigh}
+            Optimized for {locationDisplay || "your"} area
           </p>
         </div>
 
@@ -165,6 +168,12 @@ const PricingIntelligence = () => {
           </p>
           <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
             {zone.tipText}
+          </p>
+        </div>
+        {/* Trust note */}
+        <div style={{ background: "#F9FAFB", borderRadius: "8px", padding: "12px", marginBottom: "16px" }}>
+          <p style={{ fontSize: "12px", color: "#6B7280", textAlign: "center", margin: 0 }}>
+            💡 Pricing based on Toronto marketplace analysis for your neighborhood
           </p>
         </div>
 
