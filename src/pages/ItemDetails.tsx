@@ -90,7 +90,7 @@ const ItemDetails = () => {
           </div>
 
           {/* Description */}
-          <div>
+          <div className="flex-1 flex flex-col">
             <div className="flex justify-between items-center" style={{ marginBottom: "12px" }}>
               <Label htmlFor="description" style={{ fontSize: "16px", fontWeight: 500 }}>
                 Description <span className="text-destructive" style={{ fontSize: "16px" }}>*</span>
@@ -105,7 +105,7 @@ const ItemDetails = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, 500))}
               className="rounded-xl resize-none border-border focus:border-primary transition-all duration-200 focus:shadow-sm"
-              style={{ height: "140px", fontSize: "16px", padding: "16px" }}
+              style={{ minHeight: "200px", fontSize: "16px", padding: "16px", flex: "1" }}
             />
             <p style={{ fontSize: "14px", color: "#F97316", marginTop: "12px" }}>
               💡 Tip: Fill in the template or write your own description
