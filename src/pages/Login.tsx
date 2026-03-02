@@ -3,21 +3,46 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const isValid = isValidEmail && password.length >= 6;
 
-  const handleLogin = () => {
-    setError("");
-    // Mock auth
-    localStorage.setItem("looped_auth", JSON.stringify({ email, loggedIn: true }));
-    navigate("/");
+  const handleLogin = async () => {
+    setLoading(true);
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (data.user) {
+      toast({
+        title: "Success!",
+        description: "Logged in successfully",
+      });
+      navigate("/");
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -64,15 +89,13 @@ const Login = () => {
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
           <Button
             onClick={handleLogin}
-            disabled={!isValid}
+            disabled={!isValid || loading}
             className="w-full font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-none transition-all duration-300 disabled:opacity-50"
             style={{ height: "60px", fontSize: "18px", marginTop: "24px" }}
           >
-            Log In
+            {loading ? "Logging in..." : "Log In"}
           </Button>
         </div>
 

@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,10 +62,22 @@ const ItemWhatWhere = () => {
   const incoming = (location.state as Record<string, unknown>) || {};
 
   const photos = (incoming.photos as string[]) || [];
+  const aiSuggestions = incoming.aiSuggestions as any;
+  const showAiBanner = incoming.showAiBanner as boolean;
+
   const [title, setTitle] = useState((incoming.title as string) || "");
   const [category, setCategory] = useState((incoming.category as string) || "");
   const [postalCode, setPostalCode] = useState((incoming.postalCode as string) || "");
   const [showPostalError, setShowPostalError] = useState(false);
+  const [showBanner, setShowBanner] = useState(showAiBanner || false);
+
+  // Pre-fill with AI suggestions
+  useEffect(() => {
+    if (aiSuggestions) {
+      if (aiSuggestions.title) setTitle(aiSuggestions.title);
+      if (aiSuggestions.category) setCategory(aiSuggestions.category);
+    }
+  }, [aiSuggestions]);
 
   const suggestions = useMemo(() => generateSuggestions(title), [title]);
 
@@ -99,6 +112,7 @@ const ItemWhatWhere = () => {
         postalCode,
         condition: incoming.condition || "",
         description: incoming.description || "",
+        aiSuggestions, // Pass AI suggestions to next screen
       },
     });
   };
@@ -119,6 +133,28 @@ const ItemWhatWhere = () => {
 
       <div className="flex-1 overflow-y-auto flex flex-col">
         <div className="flex-1 px-6 flex flex-col" style={{ gap: "20px", paddingTop: "12px" }}>
+          
+          {/* AI Banner */}
+          {showBanner && aiSuggestions && (
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  AI filled these details!
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Please review, especially size. You can edit anything.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowBanner(false)}
+                className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </button>
+            </div>
+          )}
+
           {/* Title */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
@@ -138,26 +174,6 @@ const ItemWhatWhere = () => {
               style={{ height: "52px", fontSize: "16px", padding: "16px" }}
             />
           </div>
-
-          {/* AI Suggestions */}
-          {suggestions.length > 0 && (
-            <div className="space-y-1 -mt-3">
-              <Label className="text-sm text-muted-foreground">
-                ✨ AI suggestions
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="px-3 py-1.5 text-xs bg-secondary text-secondary-foreground rounded-full hover:bg-primary hover:text-primary-foreground transition-colors duration-200"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Category */}
           <div className="space-y-2">

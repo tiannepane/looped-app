@@ -1,276 +1,465 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, CheckCircle } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle, Trash2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import { fakeListings, ListingItem } from "@/lib/fakeData";
+import { Toaster } from "@/components/ui/toaster";
 
-const getCategoryImage = (category: string): string => {
-  const imageMap: Record<string, string> = {
-    Furniture: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop",
-    Electronics: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=400&fit=crop",
-    Appliances: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400&h=400&fit=crop",
-    Clothing: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400&h=400&fit=crop",
-    Other: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop",
-  };
-  return imageMap[category] || imageMap.Other;
-};
+type TabType = "active" | "all";
 
-interface NewListingState {
-  photos?: string[];
-  itemTitle: string;
-  category: string;
+interface Listing {
+  id: string;
+  title: string;
   price: number;
-  platforms: string[];
+  photos: string | string[];
+  status: string;
+  created_at: string;
+  sold_at: string | null;
+  deleted_at: string | null;
+  category: string;
+  postal_code: string;
+  days_to_sell: number | null;
 }
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [listings, setListings] = useState<ListingItem[]>(fakeListings);
-  const [selectedListing, setSelectedListing] = useState<ListingItem | null>(null);
-  const [showActions, setShowActions] = useState(false);
-  const [showSoldConfirm, setShowSoldConfirm] = useState(false);
-  const [showCongrats, setShowCongrats] = useState(false);
+  const { toast } = useToast();
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>("active");
 
   useEffect(() => {
-    const state = location.state as { newListing?: NewListingState } | null;
-    if (state?.newListing) {
-      const { photos, itemTitle, category, price, platforms } = state.newListing;
-      const newItem: ListingItem = {
-        id: `new-${Date.now()}`,
-        title: itemTitle,
-        price,
-        image: photos && photos.length > 0 ? photos[0] : getCategoryImage(category),
-        category,
-        condition: "Like New",
-        description: "",
-        messageCount: 0,
-        postedDaysAgo: 0,
-        platforms,
-      };
-      setListings((prev) => {
-        if (prev.some((l) => l.id === newItem.id)) return prev;
-        return [newItem, ...prev];
-      });
-      window.history.replaceState({}, document.title);
+    fetchListings();
+  }, [activeTab]);
+
+  const fetchListings = async () => {
+    setLoading(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      navigate("/login");
+      return;
     }
-  }, [location.state]);
 
-  const handleCardClick = (listing: ListingItem) => {
-    setSelectedListing(listing);
-    setShowActions(true);
+    let query = supabase
+      .from("listings")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (activeTab === "active") {
+      query = query.eq("status", "active").is("deleted_at", null);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching listings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your items",
+        variant: "destructive",
+      });
+    } else {
+      setListings(data || []);
+    }
+
+    setLoading(false);
   };
 
-  const handleMarkAsSold = () => {
-    if (!selectedListing) return;
-    setShowSoldConfirm(false);
-    setListings((prev) =>
-      prev.map((l) =>
-        l.id === selectedListing.id ? { ...l, isSold: true, soldPrice: l.price } : l
-      )
+  // Fun congratulatory messages with variety
+  const getCongratulationsMessage = (daysToSell: number, price: number) => {
+    const messages = [
+      `🎉 Awesome! Sold in ${daysToSell} ${daysToSell === 1 ? 'day' : 'days'} for $${price}!`,
+      `💰 Nice! That's $${price} in your pocket after ${daysToSell} ${daysToSell === 1 ? 'day' : 'days'}!`,
+      `⚡ Boom! Sold in just ${daysToSell} ${daysToSell === 1 ? 'day' : 'days'}!`,
+      `🔥 Great job! Your item sold in ${daysToSell} ${daysToSell === 1 ? 'day' : 'days'}!`,
+      `✨ Success! Sold for $${price} in ${daysToSell} ${daysToSell === 1 ? 'day' : 'days'}!`,
+    ];
+    
+    // Randomly select a message
+    return messages[Math.floor(Math.random() * messages.length)];
+  };
+
+  const handleMarkAsSold = async (id: string, listing: Listing) => {
+    // Calculate days to sell
+    const createdDate = new Date(listing.created_at);
+    const soldDate = new Date();
+    const diffTime = soldDate.getTime() - createdDate.getTime();
+    const daysToSell = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const { error } = await supabase
+      .from("listings")
+      .update({ 
+        status: "sold",
+        sold_at: soldDate.toISOString(),
+        days_to_sell: daysToSell
+      })
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to mark as sold",
+        variant: "destructive",
+      });
+    } else {
+      // Show fun congratulations message
+      toast({
+        title: "Sold!",
+        description: getCongratulationsMessage(daysToSell, listing.price),
+      });
+      
+      // Trigger pricing data update in background
+      updatePricingIntelligence(listing, daysToSell);
+      
+      fetchListings();
+    }
+  };
+
+  const updatePricingIntelligence = async (listing: Listing, daysToSell: number) => {
+    try {
+      // Extract postal code prefix (first 3 characters)
+      const postalPrefix = listing.postal_code.substring(0, 3).toUpperCase();
+      
+      // Try to find existing pricing data (exact match, then fallback to area)
+      let existingPricing = null;
+      
+      // Try exact postal code prefix match first
+      const { data: exactMatch } = await supabase
+        .from("pricing_data")
+        .select("*")
+        .eq("category", listing.category)
+        .eq("postal_code_prefix", postalPrefix)
+        .maybeSingle();
+
+      if (exactMatch) {
+        existingPricing = exactMatch;
+      } else {
+        // Try area match (first 2 chars, e.g., M8 for M8H)
+        const areaPrefix = postalPrefix.substring(0, 2);
+        const { data: areaMatch } = await supabase
+          .from("pricing_data")
+          .select("*")
+          .eq("category", listing.category)
+          .like("postal_code_prefix", `${areaPrefix}%`)
+          .order("confidence_score", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (areaMatch) {
+          existingPricing = areaMatch;
+        }
+      }
+
+      if (existingPricing) {
+        // Update existing pricing data
+        const totalSamples = existingPricing.sample_count + 1;
+        const newAvgPrice = Math.round(
+          (existingPricing.avg_price * existingPricing.sample_count + listing.price) / totalSamples
+        );
+        const currentAvgDays = existingPricing.avg_days_to_sell || 5;
+        const newAvgDays = Math.round(
+          (currentAvgDays * existingPricing.sample_count + daysToSell) / totalSamples
+        );
+        
+        // Increase confidence score (max 99)
+        const newConfidence = Math.min(99, existingPricing.confidence_score + 1);
+
+        await supabase
+          .from("pricing_data")
+          .update({
+            avg_price: newAvgPrice,
+            min_price: Math.min(existingPricing.min_price, listing.price),
+            max_price: Math.max(existingPricing.max_price, listing.price),
+            sample_count: totalSamples,
+            avg_days_to_sell: newAvgDays,
+            confidence_score: newConfidence,
+            data_source: 'user_sales',
+            last_updated: new Date().toISOString()
+          })
+          .eq("id", existingPricing.id);
+
+        console.log(`✅ Updated pricing: ${listing.category} in ${postalPrefix} (${totalSamples} samples, confidence ${newConfidence})`);
+      } else {
+        // Create new pricing entry
+        await supabase
+          .from("pricing_data")
+          .insert({
+            category: listing.category,
+            subcategory: 'General',
+            postal_code_prefix: postalPrefix,
+            avg_price: listing.price,
+            min_price: listing.price,
+            max_price: listing.price,
+            sample_count: 1,
+            avg_days_to_sell: daysToSell,
+            confidence_score: 75,
+            data_source: 'user_sales'
+          });
+
+        console.log(`✅ New pricing entry: ${listing.category} in ${postalPrefix}`);
+      }
+    } catch (error) {
+      console.error('Error updating pricing intelligence:', error);
+      // Silently fail - don't interrupt user experience
+    }
+  };
+
+  const handleDelete = async (id: string, listing: Listing) => {
+    const isSold = listing.status === "sold";
+    
+    const confirmMessage = isSold 
+      ? "Delete this sold item? Your earnings will stay in your account stats."
+      : "Delete this listing?";
+    
+    if (!confirm(confirmMessage)) return;
+
+    const { error } = await supabase
+      .from("listings")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete item",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Item deleted",
+      });
+      fetchListings();
+    }
+  };
+
+  const getListingStatus = (listing: Listing) => {
+    if (listing.deleted_at) return "deleted";
+    if (listing.status === "sold") return "sold";
+    return "active";
+  };
+
+  const getDaysAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const parsePhotos = (photos: string | string[]): string[] => {
+    if (Array.isArray(photos)) {
+      return photos;
+    }
+    
+    if (typeof photos === "string") {
+      try {
+        const parsed = JSON.parse(photos);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    
+    return [];
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex flex-col bg-background">
+        <header className="h-14 flex items-center justify-center px-4 bg-background border-b border-border">
+          <h1 className="text-lg font-bold text-foreground">My Items</h1>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+        <BottomNav />
+        <Toaster />
+      </div>
     );
-    setShowCongrats(true);
-  };
-
-  const handleDelete = () => {
-    if (!selectedListing) return;
-    setShowActions(false);
-    setListings((prev) => prev.filter((l) => l.id !== selectedListing.id));
-    setSelectedListing(null);
-  };
+  }
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      <header className="h-14 flex items-center justify-between px-4 bg-background border-b border-border">
-        <h1 className="text-lg font-bold text-foreground">Your Items</h1>
-        <button
-          onClick={() => navigate("/photo")}
-          className="w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-5 h-5 text-primary-foreground" />
-        </button>
+    <div className="h-full flex flex-col bg-background relative">
+      <header className="h-14 flex items-center justify-center px-4 bg-background border-b border-border">
+        <h1 className="text-lg font-bold text-foreground">My Items</h1>
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-24">
-        <div className="p-4 space-y-3">
-          {listings.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No items listed yet.</p>
-              <button
-                onClick={() => navigate("/photo")}
-                className="mt-4 text-primary font-medium hover:underline"
-              >
-                Start selling your first item
-              </button>
-            </div>
-          ) : (
-            listings.map((listing, index) => (
-              <Card
+      {/* Tabs */}
+      <div className="flex border-b border-border bg-background sticky top-0 z-10">
+        <button
+          onClick={() => setActiveTab("active")}
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+            activeTab === "active"
+              ? "text-primary border-b-2 border-primary"
+              : "text-muted-foreground"
+          }`}
+        >
+          Active
+        </button>
+        <button
+          onClick={() => setActiveTab("all")}
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+            activeTab === "all"
+              ? "text-primary border-b-2 border-primary"
+              : "text-muted-foreground"
+          }`}
+        >
+          All
+        </button>
+      </div>
+
+      {/* Listings */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {listings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <p className="text-muted-foreground mb-4">
+              {activeTab === "active" 
+                ? "No active listings yet"
+                : "No listings yet"}
+            </p>
+            <Button
+              onClick={() => navigate("/photo")}
+              size="lg"
+              className="rounded-2xl"
+            >
+              Create a Listing
+            </Button>
+          </div>
+        ) : (
+          listings.map((listing) => {
+            const status = getListingStatus(listing);
+            const photosArray = parsePhotos(listing.photos);
+            const firstPhoto = photosArray && photosArray.length > 0
+              ? photosArray[0]
+              : "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop";
+
+            return (
+              <div
                 key={listing.id}
-                onClick={() => handleCardClick(listing)}
-                className={`p-3 flex gap-3 bg-card border-border cursor-pointer hover:shadow-md transition-all duration-200 ease-out hover:scale-[1.01] ${
-                  index === 0 && listing.postedDaysAgo === 0 && !listing.isSold ? "ring-2 ring-primary/50" : ""
-                } ${listing.isSold ? "opacity-75" : ""}`}
+                className="bg-card rounded-2xl p-4 border border-border"
               >
-                <div className="relative">
-                  <img
-                    src={listing.image}
-                    alt={listing.title}
-                    className={`w-20 h-20 rounded-xl object-cover flex-shrink-0 ${listing.isSold ? "grayscale" : ""}`}
-                  />
-                  {listing.isSold && (
-                    <div className="absolute inset-0 bg-secondary/40 rounded-xl flex items-center justify-center">
-                      <CheckCircle className="w-8 h-8 text-primary" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-foreground truncate">{listing.title}</h3>
-                    {listing.isSold ? (
-                      <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full flex-shrink-0">
-                        SOLD
-                      </span>
-                    ) : listing.postedDaysAgo === 0 ? (
-                      <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex-shrink-0">
-                        NEW
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="text-primary font-bold">${listing.price}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    {listing.isSold ? (
-                      <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Sold</span>
+                <div className="flex gap-3">
+                  {/* Photo */}
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+                    <img
+                      src={firstPhoto}
+                      alt={listing.title}
+                      className={`w-full h-full object-cover ${
+                        status !== "active" ? "grayscale opacity-60" : ""
+                      }`}
+                    />
+                    {status === "active" && (
+                      <div className="absolute top-2 right-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
                       </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-primary" />
-                          <span className="text-xs text-muted-foreground">Active</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {listing.postedDaysAgo === 0
-                            ? "Just posted"
-                            : `Posted ${listing.postedDaysAgo} day${listing.postedDaysAgo !== 1 ? "s" : ""} ago`}
-                        </span>
-                      </>
+                    )}
+                    {status === "sold" && (
+                      <div className="absolute top-2 right-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      </div>
+                    )}
+                    {status === "deleted" && (
+                      <div className="absolute top-2 right-2">
+                        <Trash2 className="w-5 h-5 text-destructive" />
+                      </div>
                     )}
                   </div>
-                  <div className="flex gap-1.5 mt-1.5">
-                    {listing.platforms.includes("facebook") && (
-                      <span className="w-5 h-5 rounded bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">f</span>
-                    )}
-                    {listing.platforms.includes("kijiji") && (
-                      <span className="w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">K</span>
-                    )}
-                    {(listing.platforms.includes("carrot") || listing.platforms.includes("karrot")) && (
-                      <span className="text-sm">🥕</span>
-                    )}
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-semibold text-foreground truncate">
+                        {listing.title}
+                      </h3>
+                      {status === "active" && (
+                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full flex-shrink-0">
+                          Active
+                        </span>
+                      )}
+                      {status === "sold" && (
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full flex-shrink-0">
+                          SOLD
+                        </span>
+                      )}
+                      {status === "deleted" && (
+                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded-full flex-shrink-0">
+                          DELETED
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-2xl font-bold text-primary mb-1">
+                      ${listing.price}
+                    </p>
+
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {status === "active" && (
+                        <>Posted {getDaysAgo(listing.created_at)} days ago</>
+                      )}
+                      {status === "sold" && listing.sold_at && (
+                        <>
+                          Sold {getDaysAgo(listing.sold_at)} days ago
+                          {listing.days_to_sell && (
+                            <> • Took {listing.days_to_sell} {listing.days_to_sell === 1 ? 'day' : 'days'}</>
+                          )}
+                        </>
+                      )}
+                      {status === "deleted" && listing.deleted_at && (
+                        <>Deleted {getDaysAgo(listing.deleted_at)} days ago</>
+                      )}
+                    </p>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      {status === "active" && (
+                        <>
+                          <Button
+                            onClick={() => handleMarkAsSold(listing.id, listing)}
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-8"
+                          >
+                            Mark as Sold
+                          </Button>
+                          <Button
+                            onClick={() => handleDelete(listing.id, listing)}
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs h-8 text-destructive"
+                          >
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                      {status === "sold" && !listing.deleted_at && (
+                        <Button
+                          onClick={() => handleDelete(listing.id, listing)}
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-8 text-destructive"
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </Card>
-            ))
-          )}
-        </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <BottomNav />
-
-      {/* Action modal */}
-      <AlertDialog open={showActions} onOpenChange={setShowActions}>
-        <AlertDialogContent className="max-w-[300px] rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg">{selectedListing?.title}</AlertDialogTitle>
-            <AlertDialogDescription className="text-primary font-bold text-base">
-              ${selectedListing?.price}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 pt-2">
-            {!selectedListing?.isSold && (
-              <Button
-                onClick={() => {
-                  setShowActions(false);
-                  setShowSoldConfirm(true);
-                }}
-                className="w-full h-12 rounded-xl"
-              >
-                Mark as Sold
-              </Button>
-            )}
-            <Button variant="outline" className="w-full h-12 rounded-xl" onClick={() => setShowActions(false)}>
-              Edit Listing
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full h-12 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
-          </div>
-          <AlertDialogFooter className="pt-0">
-            <AlertDialogCancel className="w-full rounded-xl">Cancel</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Sold confirmation */}
-      <AlertDialog open={showSoldConfirm} onOpenChange={setShowSoldConfirm}>
-        <AlertDialogContent className="max-w-[300px] rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mark as Sold?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove "{selectedListing?.title}" from all platforms.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleMarkAsSold} className="rounded-xl">
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Congrats modal */}
-      <AlertDialog open={showCongrats} onOpenChange={setShowCongrats}>
-        <AlertDialogContent className="max-w-[300px] rounded-2xl text-center">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl">Congrats! 🎉</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p className="text-primary font-bold text-lg">Sold for ${selectedListing?.price}</p>
-              <p className="text-sm text-muted-foreground">
-                This listing has been removed from all platforms
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="sm:justify-center">
-            <AlertDialogAction
-              onClick={() => {
-                setShowCongrats(false);
-                setSelectedListing(null);
-              }}
-              className="w-full rounded-xl"
-            >
-              Done
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      
+      {/* Toast container */}
+      <Toaster />
     </div>
   );
 };

@@ -1,53 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import ScreenHeader from "@/components/ScreenHeader";
-import { conditions } from "@/lib/fakeData";
-import { cn } from "@/lib/utils";
-import { getLocationDisplay } from "@/lib/postalCodeMap";
+
+const conditions = ["New", "Like New", "Good", "Fair"];
 
 const ItemDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const { 
+    photos = [], 
+    title = "", 
+    category = "", 
+    postalCode = "",
+    aiSuggestions = null
+  } = (location.state as Record<string, any>) || {};
 
-  const incoming = (location.state as Record<string, unknown>) || {};
-  const photos = (incoming.photos as string[]) || [];
-  const title = (incoming.title as string) || "";
-  const category = (incoming.category as string) || "";
-  const postalCode = (incoming.postalCode as string) || "";
+  const [condition, setCondition] = useState(aiSuggestions?.condition || "Good");
+  const [size, setSize] = useState(aiSuggestions?.size || "");
+  const [description, setDescription] = useState(aiSuggestions?.description || "");
+  const [showAiBanner, setShowAiBanner] = useState(!!aiSuggestions);
 
-  const [condition, setCondition] = useState((incoming.condition as string) || "");
-  const defaultTemplate = "Size:\n\nCondition:\n\nMust be gone by:\n\nAdditional details:";
-  const [description, setDescription] = useState((incoming.description as string) || defaultTemplate);
-
-  const descriptionFilled = description.trim().length > 0 && description.trim() !== defaultTemplate.trim();
-  const isValid = condition.length > 0 && descriptionFilled;
+  useEffect(() => {
+    if (aiSuggestions) {
+      if (aiSuggestions.condition) setCondition(aiSuggestions.condition);
+      if (aiSuggestions.size) setSize(aiSuggestions.size);
+      if (aiSuggestions.description) setDescription(aiSuggestions.description);
+    }
+  }, [aiSuggestions]);
 
   const handleContinue = () => {
-    const locationDisplay = getLocationDisplay(postalCode);
     navigate("/pricing", {
-      state: {
-        photos,
-        itemTitle: title,
-        category,
-        location: locationDisplay,
-        description,
-        isMovingSale: false,
-        movingDate: null,
-      },
-    });
-  };
-
-  const handleBack = () => {
-    navigate("/description", {
       state: {
         photos,
         title,
         category,
         postalCode,
         condition,
+        size,
         description,
       },
     });
@@ -55,75 +48,98 @@ const ItemDetails = () => {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <ScreenHeader title="Item Details (2/2)" onBack={handleBack} />
+      <ScreenHeader title={`Item Details (2/2)`} />
 
-      {/* Progress dots */}
-      <div className="flex justify-center gap-4 py-3">
-        <div className="w-2 h-2 rounded-full bg-muted" />
-        <div className="w-2 h-2 rounded-full bg-primary" />
-      </div>
-
-      <div className="flex-1 overflow-y-auto flex flex-col">
-        <div className="flex-1 px-6 flex flex-col" style={{ gap: "40px", paddingTop: "32px" }}>
-          {/* Condition */}
-          <div>
-            <Label className="font-bold" style={{ fontSize: "20px", marginBottom: "16px", display: "block" }}>
-              Condition
-            </Label>
-            <div className="grid grid-cols-4 gap-2">
-              {conditions.map((cond) => (
-                <button
-                  key={cond}
-                  onClick={() => setCondition(cond)}
-                  className={cn(
-                    "font-semibold rounded-xl border-2 transition-all duration-200",
-                    condition === cond
-                      ? "border-primary bg-primary text-primary-foreground shadow-md"
-                      : "border-border bg-card text-foreground hover:border-primary/50"
-                  )}
-                  style={{ height: "70px", fontSize: "16px" }}
-                >
-                  {cond}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="flex-1 flex flex-col">
-            <div className="flex justify-between items-center" style={{ marginBottom: "12px" }}>
-              <Label htmlFor="description" style={{ fontSize: "16px", fontWeight: 500 }}>
-                Description <span className="text-destructive" style={{ fontSize: "16px" }}>*</span>
-              </Label>
-              <span className="text-muted-foreground" style={{ fontSize: "14px" }}>
-                {description.length}/500
-              </span>
-            </div>
-            <Textarea
-              id="description"
-              placeholder={"Describe your item... Include size, color, brand, flaws.\n\nMoving sale? Add your move date for urgency."}
-              value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, 500))}
-              className="rounded-xl resize-none border-border focus:border-primary transition-all duration-200 focus:shadow-sm"
-              style={{ minHeight: "200px", fontSize: "16px", padding: "16px", flex: "1" }}
-            />
-            <p style={{ fontSize: "14px", color: "#F97316", marginTop: "12px" }}>
-              💡 Tip: Fill in the template or write your own description
+      <div className="flex-1 overflow-y-auto p-4 pb-24">
+        {/* AI Banner */}
+        {showAiBanner && aiSuggestions && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-3 mb-4 relative">
+            <button
+              onClick={() => setShowAiBanner(false)}
+              className="absolute top-2 right-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+            >
+              ✕
+            </button>
+            <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+              ✨ AI filled these details! Please review, especially size. You can edit anything.
             </p>
           </div>
+        )}
+
+        {/* Condition */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3 text-foreground">
+            Condition
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {conditions.map((cond) => (
+              <button
+                key={cond}
+                onClick={() => setCondition(cond)}
+                className={`py-3 px-2 rounded-xl text-sm font-medium transition-all ${
+                  condition === cond
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                {cond}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* CTA Button */}
-        <div className="px-6 mt-auto" style={{ paddingBottom: "32px", paddingTop: "16px" }}>
-          <Button
-            onClick={handleContinue}
-            disabled={!isValid}
-            className="w-full font-semibold rounded-xl transition-all duration-300 ease-out disabled:opacity-50"
-            style={{ height: "60px", fontSize: "18px" }}
-          >
-            Continue to Pricing
-          </Button>
+        {/* Size */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2 text-foreground">
+            Size
+          </label>
+          <Input
+            type="text"
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            placeholder="e.g., 15-inch screen, Large, 6ft x 4ft"
+            className="h-12 rounded-xl"
+          />
+          {aiSuggestions?.size && (
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 AI estimate - please measure for accuracy
+            </p>
+          )}
         </div>
+
+        {/* Description */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-foreground">
+              Description <span className="text-destructive">*</span>
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {description.length}/500
+            </span>
+          </div>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+            placeholder="Describe your item's condition, why you're selling, any flaws..."
+            className="min-h-[200px] rounded-xl resize-none"
+            maxLength={500}
+          />
+          <p className="text-xs text-primary mt-2">
+            💡 Tip: Fill in the template or write your own description
+          </p>
+        </div>
+      </div>
+
+      {/* Fixed Bottom Button */}
+      <div className="p-4 bg-background border-t border-border">
+        <Button
+          onClick={handleContinue}
+          disabled={!description.trim()}
+          size="lg"
+          className="w-full h-14 text-lg font-semibold rounded-2xl disabled:opacity-50"
+        >
+          Continue to Pricing
+        </Button>
       </div>
     </div>
   );

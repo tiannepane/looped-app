@@ -15,6 +15,8 @@ import PostToPlatforms from "./pages/PostToPlatforms";
 import Dashboard from "./pages/Dashboard";
 import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
+import FAQ from "./pages/FAQ";
+
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/account" element={<Account />} />
             <Route path="*" element={<NotFound />} />
+            <Route path="/faq" element={<FAQ />} />
           </Routes>
         </MobileFrame>
       </BrowserRouter>

@@ -1,16 +1,30 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BottomNav from "@/components/BottomNav";
+import { supabase } from "@/lib/supabase";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const isLoggedIn = (() => {
-    try {
-      const auth = JSON.parse(localStorage.getItem("looped_auth") || "{}");
-      return auth.loggedIn === true;
-    } catch { return false; }
-  })();
+  useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsLoggedIn(true);
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleGetStarted = () => {
     if (isLoggedIn) {
@@ -19,6 +33,31 @@ const Home = () => {
       navigate("/login");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-3">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="w-8 h-8 text-primary-foreground animate-spin"
+              strokeWidth="2"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -61,7 +100,9 @@ const Home = () => {
         {!isLoggedIn && (
           <p className="text-sm text-muted-foreground mb-4">
             Already have an account?{" "}
-            <button onClick={() => navigate("/login")} className="text-primary font-semibold hover:underline">Log In</button>
+            <button onClick={() => navigate("/login")} className="text-primary font-semibold hover:underline">
+              Log In
+            </button>
           </p>
         )}
 
@@ -75,7 +116,7 @@ const Home = () => {
 
         {/* Pricing note */}
         <p className="text-sm text-muted-foreground mt-4">
-          $5 for 30 days • Renew when you need it
+          Free to start • Premium for power sellers
         </p>
       </div>
 

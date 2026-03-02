@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 const getPasswordStrength = (pw: string): { label: string; color: string; width: string } => {
   if (pw.length < 6) return { label: "Too short", color: "bg-destructive", width: "w-1/4" };
@@ -17,10 +19,12 @@ const getPasswordStrength = (pw: string): { label: string; color: string; width:
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const passwordsMatch = password === confirm && confirm.length > 0;
@@ -28,9 +32,39 @@ const Signup = () => {
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
 
-  const handleSignup = () => {
-    localStorage.setItem("looped_auth", JSON.stringify({ email, name, loggedIn: true }));
-    navigate("/");
+  const handleSignup = async () => {
+    setLoading(true);
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
+    });
+
+    if (error) {
+      toast({
+        title: "Signup failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (data.user) {
+      toast({
+        title: "Success!",
+        description: "Account created! Please check your email to confirm.",
+      });
+      // Navigate to login after a brief delay
+      setTimeout(() => navigate("/login"), 2000);
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -105,11 +139,11 @@ const Signup = () => {
 
           <Button
             onClick={handleSignup}
-            disabled={!isValid}
+            disabled={!isValid || loading}
             className="w-full font-semibold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-none transition-all duration-300 disabled:opacity-50"
             style={{ height: "60px", fontSize: "18px", marginTop: "24px" }}
           >
-            Create Account
+            {loading ? "Creating account..." : "Create Account"}
           </Button>
         </div>
 

@@ -1,194 +1,241 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getLocationDisplay } from "@/lib/postalCodeMap";
-
-import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import ScreenHeader from "@/components/ScreenHeader";
-
-const mockPricingData: Record<string, {
-  marketLow: number; marketHigh: number; average: number;
-  searches: number;
-  quickPrice: number; fairPrice: number; patientPrice: number;
-}> = {
-  'coffee table': { marketLow: 150, marketHigh: 500, average: 300, searches: 28, quickPrice: 270, fairPrice: 300, patientPrice: 330 },
-  desk: { marketLow: 80, marketHigh: 200, average: 125, searches: 42, quickPrice: 112, fairPrice: 125, patientPrice: 138 },
-  laptop: { marketLow: 300, marketHigh: 800, average: 550, searches: 67, quickPrice: 495, fairPrice: 550, patientPrice: 605 },
-  sofa: { marketLow: 250, marketHigh: 900, average: 500, searches: 34, quickPrice: 450, fairPrice: 500, patientPrice: 550 },
-  default: { marketLow: 50, marketHigh: 300, average: 150, searches: 15, quickPrice: 135, fairPrice: 150, patientPrice: 165 },
-};
-
-const matchPricingData = (itemTitle: string) => {
-  const lower = itemTitle.toLowerCase();
-  if (lower.includes("coffee table") || lower.includes("table")) return mockPricingData["coffee table"];
-  if (lower.includes("desk")) return mockPricingData.desk;
-  if (lower.includes("laptop") || lower.includes("computer")) return mockPricingData.laptop;
-  if (lower.includes("sofa") || lower.includes("couch")) return mockPricingData.sofa;
-  return mockPricingData.default;
-};
-
-const getZoneInfo = (price: number, quick: number, fair: number, patient: number) => {
-  const range = patient - quick;
-  const lowThreshold = quick + range * 0.33;
-  const highThreshold = quick + range * 0.67;
-
-  if (price <= lowThreshold) {
-    return {
-      color: "#10B981",
-      timeline: "1-3 days",
-      tipIcon: "⚡",
-      tipHeading: "Fast sale pricing",
-      tipText: "Great for moving sales or urgent listings. Sells quickly.",
-    };
-  }
-  if (price <= highThreshold) {
-    return {
-      color: "#F97316",
-      timeline: "3-7 days",
-      tipIcon: "✓",
-      tipHeading: "Balanced pricing",
-      tipText: "Recommended approach. Good mix of speed and profit.",
-    };
-  }
-  return {
-    color: "#EF4444",
-    timeline: "7-14 days",
-    tipIcon: "💰",
-    tipHeading: "Patient pricing",
-    tipText: "Maximize profit. Best if you're not in a rush.",
-  };
-};
+import { supabase } from "@/lib/supabase";
 
 const PricingIntelligence = () => {
   const navigate = useNavigate();
-  const loc = useLocation();
+  const location = useLocation();
+
   const {
     photos = [],
-    itemTitle = "item",
-    category = "Other",
-    location: itemLocation = "",
+    title = "",
+    category = "",
+    postalCode = "",
+    condition = "",
+    size = "",
     description = "",
-    isMovingSale = false,
-    movingDate = null,
-  } = (loc.state as Record<string, any>) || {};
+  } = (location.state as Record<string, any>) || {};
 
-  const locationDisplay = useMemo(() => getLocationDisplay(itemLocation), [itemLocation]);
+  const [price, setPrice] = useState<number>(0);
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 1000, avg: 100 });
+  const [loading, setLoading] = useState(true);
+  const [sampleCount, setSampleCount] = useState(0);
+  const [locationType, setLocationType] = useState("");
 
-  const data = useMemo(() => matchPricingData(itemTitle), [itemTitle]);
-  const { quickPrice, fairPrice, patientPrice } = data;
+  const extractSubcategory = (title: string, category: string): string => {
+    const titleLower = title.toLowerCase();
 
-  const [price, setPrice] = useState(fairPrice);
+    if (category === "Electronics") {
+      if (titleLower.includes("laptop") || titleLower.includes("macbook")) return "Laptop";
+      if (titleLower.includes("monitor") || titleLower.includes("screen")) return "Monitor";
+      if (titleLower.includes("phone") || titleLower.includes("iphone")) return "Phone";
+      if (titleLower.includes("tablet") || titleLower.includes("ipad")) return "Tablet";
+      return "Laptop";
+    }
 
-  const zone = useMemo(() => getZoneInfo(price, quickPrice, fairPrice, patientPrice), [price, quickPrice, fairPrice, patientPrice]);
+    if (category === "Furniture") {
+      if (titleLower.includes("dining table") || titleLower.includes("dinner table")) return "Dining Table";
+      if (titleLower.includes("coffee table")) return "Coffee Table";
+      if (titleLower.includes("desk")) return "Desk";
+      if (titleLower.includes("sofa") || titleLower.includes("couch")) return "Sofa";
+      if (titleLower.includes("table")) return "Dining Table";
+      return "Dining Table";
+    }
 
-  const handleSliderChange = useCallback((val: number[]) => {
-    const v = val[0];
-    const range = patientPrice - quickPrice;
-    const snap = Math.max(2, Math.round(range * 0.05));
-    if (Math.abs(v - quickPrice) <= snap) setPrice(quickPrice);
-    else if (Math.abs(v - fairPrice) <= snap) setPrice(fairPrice);
-    else if (Math.abs(v - patientPrice) <= snap) setPrice(patientPrice);
-    else setPrice(v);
-  }, [quickPrice, fairPrice, patientPrice]);
+    return "General";
+  };
 
-  const sliderValue = Math.min(Math.max(price, quickPrice), patientPrice);
+  const getPricingData = async (category: string, subcategory: string, postalCode: string) => {
+    try {
+      const postalPrefix = postalCode.substring(0, 3).toUpperCase();
+
+      let { data } = await supabase
+        .from("pricing_data")
+        .select("*")
+        .eq("category", category)
+        .eq("subcategory", subcategory)
+        .eq("postal_code_prefix", postalPrefix)
+        .maybeSingle();
+
+      if (data) {
+        return { ...data, location_type: "exact" };
+      }
+
+      const areaPrefix = postalPrefix.substring(0, 2);
+      ({ data } = await supabase
+        .from("pricing_data")
+        .select("*")
+        .eq("category", category)
+        .eq("subcategory", subcategory)
+        .like("postal_code_prefix", `${areaPrefix}%`)
+        .order("confidence_score", { ascending: false })
+        .limit(1)
+        .maybeSingle());
+
+      if (data) {
+        return { ...data, location_type: "area" };
+      }
+
+      ({ data } = await supabase
+        .from("pricing_data")
+        .select("*")
+        .eq("category", category)
+        .eq("subcategory", subcategory)
+        .eq("postal_code_prefix", "TORONTO")
+        .maybeSingle());
+
+      if (data) {
+        return { ...data, location_type: "fallback" };
+      }
+
+      ({ data } = await supabase
+        .from("pricing_data")
+        .select("*")
+        .eq("category", category)
+        .eq("postal_code_prefix", "TORONTO")
+        .order("confidence_score", { ascending: false })
+        .limit(1)
+        .maybeSingle());
+
+      if (data) {
+        return { ...data, location_type: "fallback" };
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching pricing data:", error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const fetchPricingData = async () => {
+      setLoading(true);
+
+      const subcategory = extractSubcategory(title, category);
+
+      const data = await getPricingData(category, subcategory, postalCode);
+
+      if (data) {
+        setPriceRange({
+          min: data.min_price,
+          max: data.max_price,
+          avg: data.avg_price,
+        });
+        setPrice(data.avg_price);
+        setSampleCount(data.sample_count || 0);
+        setLocationType(data.location_type || "area");
+      } else {
+        setPriceRange({ min: 50, max: 500, avg: 150 });
+        setPrice(150);
+      }
+
+      setLoading(false);
+    };
+
+    fetchPricingData();
+  }, [title, category, postalCode]);
+
+  const getLocationText = () => {
+    if (locationType === "exact") return "in your neighborhood";
+    if (locationType === "area") return "in your area";
+    return "in Toronto";
+  };
+
+  const handleContinue = () => {
+    navigate("/platforms", {
+      state: {
+        photos,
+        title,
+        category,
+        price,
+        postalCode,
+        description,
+        condition,
+        size,
+      },
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex flex-col bg-background">
+        <ScreenHeader title="Set Your Price" />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <ScreenHeader title="Smart Pricing" />
+      <ScreenHeader title="Set Your Price" />
 
-      <div className="flex-1 flex flex-col px-6 pt-4">
-        {/* Market Data - simple centered text */}
-        <div className="text-center" style={{ marginBottom: "24px" }}>
-          <p className="font-bold text-foreground" style={{ fontSize: "16px" }}>
-            Market average: <span style={{ color: "#F97316" }}>${data.average}</span>
-          </p>
-          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
-            Optimized for {locationDisplay || "your"} area
-          </p>
-        </div>
-
-        {/* Slider Section */}
-        <p className="text-center font-bold text-foreground" style={{ fontSize: "18px", marginBottom: "16px" }}>
-          Choose Your Speed
-        </p>
-
-        <div className="flex justify-between px-1" style={{ fontSize: "14px", color: "hsl(var(--muted-foreground))", marginBottom: "8px" }}>
-          <span>Fast Sale</span>
-          <span>Max Profit</span>
-        </div>
-
-        <div className="px-1">
-          <Slider
-            value={[sliderValue]}
-            min={quickPrice}
-            max={patientPrice}
-            step={1}
-            onValueChange={handleSliderChange}
-            className="w-full"
-          />
-        </div>
-
-        {/* Price markers */}
-        <div className="flex justify-between text-center px-1" style={{ marginTop: "8px", marginBottom: "32px" }}>
-          <div className="flex flex-col items-start">
-            <span className={`font-semibold ${price === quickPrice ? "text-foreground" : "text-muted-foreground"}`} style={{ fontSize: "14px" }}>
-              ${quickPrice}
-            </span>
-            <span className="text-muted-foreground" style={{ fontSize: "12px" }}>1-3 days</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className={`font-semibold ${price === fairPrice ? "text-foreground" : "text-muted-foreground"}`} style={{ fontSize: "14px" }}>
-              ${fairPrice}
-            </span>
-            <span className="text-muted-foreground" style={{ fontSize: "12px" }}>3-7 days</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className={`font-semibold ${price === patientPrice ? "text-foreground" : "text-muted-foreground"}`} style={{ fontSize: "14px" }}>
-              ${patientPrice}
-            </span>
-            <span className="text-muted-foreground" style={{ fontSize: "12px" }}>7-14 days</span>
-          </div>
-        </div>
-
-        {/* Large price display */}
-        <div className="text-center" style={{ marginBottom: "24px" }}>
-          <p className="font-bold transition-colors duration-200" style={{ fontSize: "56px", color: zone.color, lineHeight: 1.1 }}>
+      <div className="flex-1 overflow-y-auto p-6 pb-24 flex flex-col items-center justify-center">
+        
+        {/* Price Display - Hero Element */}
+        <div className="text-center mb-12">
+          <p className="text-7xl font-bold text-primary mb-3">
             ${price}
           </p>
-          <p className="text-muted-foreground" style={{ fontSize: "16px", marginTop: "4px" }}>
-            Sells in {zone.timeline}
+          <p className="text-sm text-muted-foreground">
+            Based on {sampleCount} sold items {getLocationText()}
           </p>
         </div>
 
-        {/* Dynamic pricing tip */}
-        <div style={{ background: "#FFF7ED", borderRadius: "12px", padding: "16px", margin: "24px 0" }}>
-          <p className="font-bold text-foreground" style={{ fontSize: "15px", marginBottom: "4px" }}>
-            {zone.tipIcon} {zone.tipHeading}
-          </p>
-          <p className="text-muted-foreground" style={{ fontSize: "14px" }}>
-            {zone.tipText}
-          </p>
-        </div>
-        {/* Trust note */}
-        <div style={{ background: "#F9FAFB", borderRadius: "8px", padding: "12px", marginBottom: "16px" }}>
-          <p style={{ fontSize: "12px", color: "#6B7280", textAlign: "center", margin: 0 }}>
-            💡 Pricing based on Toronto marketplace analysis for your neighborhood
-          </p>
+        {/* Price Slider */}
+        <div className="w-full max-w-md px-4">
+          <input
+            type="range"
+            min={priceRange.min}
+            max={priceRange.max}
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary mb-6"
+            style={{
+              background: `linear-gradient(to right, #f97316 0%, #f97316 ${
+                ((price - priceRange.min) / (priceRange.max - priceRange.min)) * 100
+              }%, #e5e7eb ${
+                ((price - priceRange.min) / (priceRange.max - priceRange.min)) * 100
+              }%, #e5e7eb 100%)`
+            }}
+          />
+          
+          {/* Slider Labels - Cleaner, Centered */}
+          <div className="flex justify-between items-center px-1">
+            {/* Quick Sale */}
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-muted-foreground mb-1">Quick sale</span>
+              <span className="text-sm font-semibold text-foreground">${priceRange.min}</span>
+            </div>
+            
+            {/* Market Average */}
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-muted-foreground mb-1">Market avg</span>
+              <span className="text-sm font-semibold text-foreground">${priceRange.avg}</span>
+            </div>
+            
+            {/* Patient */}
+            <div className="flex flex-col items-center">
+              <span className="text-xs text-muted-foreground mb-1">Patient</span>
+              <span className="text-sm font-semibold text-foreground">${priceRange.max}</span>
+            </div>
+          </div>
         </div>
 
       </div>
 
-      {/* CTA */}
-      <div style={{ padding: "0 24px 24px" }}>
+      {/* Fixed Bottom Button */}
+      <div className="p-4 bg-background border-t border-border">
         <Button
-          onClick={() => navigate("/platforms", {
-            state: { photos, itemTitle, category, price, location: itemLocation, description, isMovingSale, movingDate },
-          })}
-          className="w-full font-semibold text-primary-foreground shadow-none"
-          style={{ height: "60px", fontSize: "18px", borderRadius: "12px", background: "#F97316" }}
+          onClick={handleContinue}
+          size="lg"
+          className="w-full h-14 text-lg font-semibold rounded-2xl"
         >
-          Continue →
+          Continue
         </Button>
       </div>
     </div>
