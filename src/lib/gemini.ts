@@ -8,8 +8,7 @@ export interface ItemAnalysis {
 
 export async function analyzeItemPhoto(imageDataUrl: string): Promise<ItemAnalysis> {
   try {
-    // Call your backend server instead of Claude API directly
-    const response = await fetch('http://localhost:3001/api/analyze-photo', {
+    const response = await fetch('/api/analyze-photo', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,9 +25,7 @@ export async function analyzeItemPhoto(imageDataUrl: string): Promise<ItemAnalys
     }
 
     const data = await response.json();
-    
     console.log('Analysis result:', data);
-
     return data;
   } catch (error) {
     console.error('Error analyzing photo:', error);

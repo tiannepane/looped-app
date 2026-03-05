@@ -1,23 +1,8 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-dotenv.config({ path: '.env.local' });
-
-const app = express();
-const PORT = 3001;
-
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Allow large base64 images
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// Claude vision analysis endpoint
-app.post('/api/analyze-photo', async (req, res) => {
   try {
     const { imageDataUrl } = req.body;
 
@@ -31,11 +16,9 @@ app.post('/api/analyze-photo', async (req, res) => {
       return res.status(500).json({ error: 'Claude API key not configured' });
     }
 
-    // Convert data URL to base64
     const base64Data = imageDataUrl.split(',')[1];
     const mimeType = imageDataUrl.split(';')[0].split(':')[1];
 
-    // Call Claude API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -96,9 +79,6 @@ Description: [description]`
     const data = await response.json();
     const text = data.content[0].text;
 
-    console.log('Claude response:', text);
-
-    // Parse the response
     const lines = text.split('\n').filter(line => line.trim());
     const parsed = {
       title: '',
@@ -127,8 +107,4 @@ Description: [description]`
     console.error('Error analyzing photo:', error);
     res.status(500).json({ error: 'Failed to analyze photo' });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Backend server running on http://localhost:${PORT}`);
-});
+}

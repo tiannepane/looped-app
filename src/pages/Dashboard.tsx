@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Trash2 } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import { Toaster } from "@/components/ui/toaster";
 
 type TabType = "active" | "all";
 
@@ -17,7 +16,7 @@ interface Listing {
   status: string;
   created_at: string;
   sold_at: string | null;
-  deleted_at: string | null;
+  archived_at: string | null;
   category: string;
   postal_code: string;
   days_to_sell: number | null;
@@ -29,6 +28,7 @@ const Dashboard = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("active");
+  const [archiveTarget, setArchiveTarget] = useState<string | null>(null);
 
   useEffect(() => {
     fetchListings();
@@ -48,10 +48,11 @@ const Dashboard = () => {
       .from("listings")
       .select("*")
       .eq("user_id", user.id)
+      .is("archived_at", null)
       .order("created_at", { ascending: false });
 
     if (activeTab === "active") {
-      query = query.eq("status", "active").is("deleted_at", null);
+      query = query.eq("status", "active");
     }
 
     const { data, error } = await query;
@@ -70,7 +71,6 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  // Fun congratulatory messages with variety
   const getCongratulationsMessage = (daysToSell: number, price: number) => {
     const messages = [
       `🎉 Awesome! Sold in ${daysToSell} ${daysToSell === 1 ? 'day' : 'days'} for $${price}!`,
@@ -80,12 +80,10 @@ const Dashboard = () => {
       `✨ Success! Sold for $${price} in ${daysToSell} ${daysToSell === 1 ? 'day' : 'days'}!`,
     ];
     
-    // Randomly select a message
     return messages[Math.floor(Math.random() * messages.length)];
   };
 
   const handleMarkAsSold = async (id: string, listing: Listing) => {
-    // Calculate days to sell
     const createdDate = new Date(listing.created_at);
     const soldDate = new Date();
     const diffTime = soldDate.getTime() - createdDate.getTime();
@@ -107,28 +105,22 @@ const Dashboard = () => {
         variant: "destructive",
       });
     } else {
-      // Show fun congratulations message
       toast({
         title: "Sold!",
         description: getCongratulationsMessage(daysToSell, listing.price),
       });
       
-      // Trigger pricing data update in background
       updatePricingIntelligence(listing, daysToSell);
-      
       fetchListings();
     }
   };
 
   const updatePricingIntelligence = async (listing: Listing, daysToSell: number) => {
     try {
-      // Extract postal code prefix (first 3 characters)
       const postalPrefix = listing.postal_code.substring(0, 3).toUpperCase();
       
-      // Try to find existing pricing data (exact match, then fallback to area)
       let existingPricing = null;
       
-      // Try exact postal code prefix match first
       const { data: exactMatch } = await supabase
         .from("pricing_data")
         .select("*")
@@ -139,7 +131,6 @@ const Dashboard = () => {
       if (exactMatch) {
         existingPricing = exactMatch;
       } else {
-        // Try area match (first 2 chars, e.g., M8 for M8H)
         const areaPrefix = postalPrefix.substring(0, 2);
         const { data: areaMatch } = await supabase
           .from("pricing_data")
@@ -156,7 +147,6 @@ const Dashboard = () => {
       }
 
       if (existingPricing) {
-        // Update existing pricing data
         const totalSamples = existingPricing.sample_count + 1;
         const newAvgPrice = Math.round(
           (existingPricing.avg_price * existingPricing.sample_count + listing.price) / totalSamples
@@ -166,7 +156,6 @@ const Dashboard = () => {
           (currentAvgDays * existingPricing.sample_count + daysToSell) / totalSamples
         );
         
-        // Increase confidence score (max 99)
         const newConfidence = Math.min(99, existingPricing.confidence_score + 1);
 
         await supabase
@@ -185,7 +174,6 @@ const Dashboard = () => {
 
         console.log(`✅ Updated pricing: ${listing.category} in ${postalPrefix} (${totalSamples} samples, confidence ${newConfidence})`);
       } else {
-        // Create new pricing entry
         await supabase
           .from("pricing_data")
           .insert({
@@ -205,41 +193,38 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error updating pricing intelligence:', error);
-      // Silently fail - don't interrupt user experience
     }
   };
 
-  const handleDelete = async (id: string, listing: Listing) => {
-    const isSold = listing.status === "sold";
-    
-    const confirmMessage = isSold 
-      ? "Delete this sold item? Your earnings will stay in your account stats."
-      : "Delete this listing?";
-    
-    if (!confirm(confirmMessage)) return;
+  const confirmArchive = (id: string) => {
+    setArchiveTarget(id);
+  };
+
+  const handleArchive = async () => {
+    if (!archiveTarget) return;
 
     const { error } = await supabase
       .from("listings")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", archiveTarget);
 
     if (error) {
       toast({
         title: "Error",
-        description: "Failed to delete item",
+        description: "Failed to remove item",
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Success",
-        description: "Item deleted",
+        title: "Removed",
+        description: "Item has been archived",
       });
       fetchListings();
     }
+    setArchiveTarget(null);
   };
 
   const getListingStatus = (listing: Listing) => {
-    if (listing.deleted_at) return "deleted";
     if (listing.status === "sold") return "sold";
     return "active";
   };
@@ -279,7 +264,6 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Loading...</p>
         </div>
         <BottomNav />
-        <Toaster />
       </div>
     );
   }
@@ -351,7 +335,7 @@ const Dashboard = () => {
                       src={firstPhoto}
                       alt={listing.title}
                       className={`w-full h-full object-cover ${
-                        status !== "active" ? "grayscale opacity-60" : ""
+                        status === "sold" ? "grayscale opacity-60" : ""
                       }`}
                     />
                     {status === "active" && (
@@ -362,11 +346,6 @@ const Dashboard = () => {
                     {status === "sold" && (
                       <div className="absolute top-2 right-2">
                         <CheckCircle className="w-5 h-5 text-green-600" />
-                      </div>
-                    )}
-                    {status === "deleted" && (
-                      <div className="absolute top-2 right-2">
-                        <Trash2 className="w-5 h-5 text-destructive" />
                       </div>
                     )}
                   </div>
@@ -387,11 +366,6 @@ const Dashboard = () => {
                           SOLD
                         </span>
                       )}
-                      {status === "deleted" && (
-                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded-full flex-shrink-0">
-                          DELETED
-                        </span>
-                      )}
                     </div>
 
                     <p className="text-2xl font-bold text-primary mb-1">
@@ -410,9 +384,6 @@ const Dashboard = () => {
                           )}
                         </>
                       )}
-                      {status === "deleted" && listing.deleted_at && (
-                        <>Deleted {getDaysAgo(listing.deleted_at)} days ago</>
-                      )}
                     </p>
 
                     {/* Actions */}
@@ -428,24 +399,14 @@ const Dashboard = () => {
                             Mark as Sold
                           </Button>
                           <Button
-                            onClick={() => handleDelete(listing.id, listing)}
+                            onClick={() => confirmArchive(listing.id)}
                             size="sm"
                             variant="ghost"
-                            className="text-xs h-8 text-destructive"
+                            className="text-xs h-8 text-muted-foreground"
                           >
-                            Delete
+                            Remove
                           </Button>
                         </>
-                      )}
-                      {status === "sold" && !listing.deleted_at && (
-                        <Button
-                          onClick={() => handleDelete(listing.id, listing)}
-                          size="sm"
-                          variant="ghost"
-                          className="text-xs h-8 text-destructive"
-                        >
-                          Delete
-                        </Button>
                       )}
                     </div>
                   </div>
@@ -456,10 +417,36 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Archive Confirmation Dialog */}
+      {archiveTarget && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-2xl p-6 mx-4 w-[calc(100%-2rem)] shadow-lg">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Remove this listing?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              This item will be hidden from your dashboard. You can restore it later from Settings.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setArchiveTarget(null)}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleArchive}
+                className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Remove
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
-      
-      {/* Toast container */}
-      <Toaster />
     </div>
   );
 };

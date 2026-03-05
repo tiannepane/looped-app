@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Check, ChevronDown, ChevronUp, ClipboardCopy, Download } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, ClipboardCopy, Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +20,10 @@ const platforms = [
         </svg>
       </div>
     ),
-    url: "https://m.facebook.com/marketplace/create",
+    deepLink: "fb://marketplace/create",
+    webUrl: "https://m.facebook.com/marketplace/create",
+    appStoreUrl: "https://apps.apple.com/app/facebook/id284882215",
+    playStoreUrl: "https://play.google.com/store/apps/details?id=com.facebook.katana",
   },
   {
     id: "kijiji",
@@ -31,7 +34,10 @@ const platforms = [
         <span className="text-white font-bold text-lg">K</span>
       </div>
     ),
-    url: "https://kijiji.ca/p-post-ad.html",
+    deepLink: "kijiji://post",
+    webUrl: "https://kijiji.ca/p-post-ad.html",
+    appStoreUrl: "https://apps.apple.com/app/kijiji-buy-sell-save/id677523465",
+    playStoreUrl: "https://play.google.com/store/apps/details?id=com.ebay.kijiji.ca",
   },
   {
     id: "karrot",
@@ -42,7 +48,10 @@ const platforms = [
         <span className="text-2xl">🥕</span>
       </div>
     ),
-    url: "https://ca.karrotmarket.com/create",
+    deepLink: "karrot://post",
+    webUrl: "https://ca.karrotmarket.com/create",
+    appStoreUrl: "https://apps.apple.com/app/karrot-buy-sell-locally/id1018769995",
+    playStoreUrl: "https://play.google.com/store/apps/details?id=com.towneers.www",
   },
 ];
 
@@ -70,6 +79,25 @@ const PostToPlatforms = () => {
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [tipCount, setTipCount] = useState(0);
+
+  useEffect(() => {
+    const count = parseInt(localStorage.getItem("looped_platform_tip_count") || "0");
+    setTipCount(count);
+    if (count < 5) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    const newCount = tipCount + 1;
+    setTipCount(newCount);
+    localStorage.setItem("looped_platform_tip_count", String(newCount));
+  };
+
+  const isFirstVisit = tipCount === 0;
 
   const listingText = [
     `${title} - $${price}`,
@@ -91,13 +119,35 @@ const PostToPlatforms = () => {
     }
   };
 
+  const tryDeepLink = (platform: typeof platforms[0]) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (!isMobile) {
+      window.open(platform.webUrl, "_blank");
+      return;
+    }
+
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = platform.deepLink;
+    document.body.appendChild(iframe);
+
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      if (!document.hidden) {
+        window.open(platform.webUrl, "_blank");
+      }
+    }, 1500);
+  };
+
   const handleCopyAndOpen = async (platform: typeof platforms[0]) => {
     try {
       await navigator.clipboard.writeText(listingText);
       toast({ title: `✓ Copied! Opening ${platform.name}...` });
       setOpenedPlatforms((p) => [...new Set([...p, platform.id])]);
+
       setTimeout(() => {
-        window.open(platform.url, "_blank");
+        tryDeepLink(platform);
       }, 500);
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
@@ -145,7 +195,6 @@ const PostToPlatforms = () => {
   };
 
   const handleDone = async () => {
-    // PROTECTION 1: Session-based check
     if (hasSubmitted) {
       toast({
         title: "Already submitted",
@@ -155,7 +204,6 @@ const PostToPlatforms = () => {
       return;
     }
 
-    // PROTECTION 2: Prevent double-click
     if (saving) return;
     
     setSaving(true);
@@ -173,7 +221,6 @@ const PostToPlatforms = () => {
         return;
       }
 
-      // PROTECTION 3: Check for existing listing
       const { data: existingListings } = await supabase
         .from('listings')
         .select('id')
@@ -181,7 +228,7 @@ const PostToPlatforms = () => {
         .eq('title', title)
         .eq('price', Number(price))
         .eq('status', 'active')
-        .is('deleted_at', null);
+        .is('archived_at', null);
 
       if (existingListings && existingListings.length > 0) {
         toast({
@@ -195,7 +242,6 @@ const PostToPlatforms = () => {
         return;
       }
 
-      // Insert new listing
       const { data, error } = await supabase
         .from('listings')
         .insert({
@@ -223,7 +269,6 @@ const PostToPlatforms = () => {
         return;
       }
 
-      // Mark as submitted
       setHasSubmitted(true);
 
       toast({
@@ -246,7 +291,7 @@ const PostToPlatforms = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background relative">
       <ScreenHeader title="Post to Platforms" />
 
       <div className="flex-1 overflow-y-auto">
@@ -347,6 +392,70 @@ const PostToPlatforms = () => {
           {saving ? "Saving..." : hasSubmitted ? "Already Saved" : "Done"}
         </Button>
       </div>
+
+      {/* Onboarding Bottom Sheet */}
+      {showOnboarding && (
+        <>
+          <div
+            className="absolute inset-0 bg-black/40 z-40"
+            onClick={dismissOnboarding}
+          />
+          <div className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl p-6 shadow-lg">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold text-foreground">
+                {isFirstVisit ? "Quick tip" : "Reminder"}
+              </h3>
+              <button onClick={dismissOnboarding}>
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+
+            {isFirstVisit ? (
+              <>
+                <p className="text-sm text-muted-foreground mb-5">
+                  For the fastest posting, make sure you have these apps installed and logged in. We'll open them directly so you can paste and post!
+                </p>
+                <div className="space-y-3 mb-6">
+                  {platforms.map((p) => (
+                    <div key={p.id} className="flex items-center gap-3">
+                      <div className="flex-shrink-0">{p.icon}</div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{p.name}</p>
+                      </div>
+                      <span className="text-xs text-green-600 font-medium"></span>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={dismissOnboarding}
+                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-none"
+                >
+                  Got it, let's go!
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Make sure you're logged into these apps for the fastest posting experience.
+                </p>
+                <div className="flex items-center gap-4 mb-6 justify-center">
+                  {platforms.map((p) => (
+                    <div key={p.id} className="flex-shrink-0">
+                      {p.icon}
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={dismissOnboarding}
+                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-none"
+                >
+                  Got it
+                </Button>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

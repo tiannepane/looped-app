@@ -18,7 +18,7 @@ const MobileFrame = ({ children }: MobileFrameProps) => {
           </div>
         </div>
         {/* Content area */}
-        <div className="h-[calc(100%-44px)] overflow-hidden">
+        <div className="h-[calc(100%-44px)] overflow-hidden" style={{ transform: 'translateZ(0)' }}>
           {children}
         </div>
       </div>
