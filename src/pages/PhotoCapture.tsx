@@ -125,12 +125,12 @@ const PhotoCapture = () => {
   };
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: '100%', maxHeight: '100%' }}>
+    <div className="flex flex-col bg-background h-[100dvh] max-h-[100dvh] overflow-hidden">
       <ScreenHeader title="Add Photos" />
 
-      <div className="flex-1 flex flex-col p-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col p-4 overflow-auto min-h-0">
         {/* Camera area */}
-        <div className="flex-1 flex flex-col items-center justify-center bg-muted rounded-2xl mb-4 relative overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center bg-muted rounded-2xl mb-4 relative overflow-hidden min-h-0">
           {photos.length === 0 ? (
             <button
               onClick={handleAddPhoto}
@@ -168,7 +168,7 @@ const PhotoCapture = () => {
 
         {/* AI Guidance Banner */}
         {photos.length > 0 && (
-          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-3 mb-4">
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-3 mb-4 flex-shrink-0">
             <div className="flex gap-2">
               <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
@@ -185,7 +185,7 @@ const PhotoCapture = () => {
 
         {/* Thumbnail row */}
         {photos.length > 0 && (
-          <div className="flex gap-3 overflow-x-auto pb-2 mb-4">
+          <div className="flex gap-3 overflow-x-auto pb-2 mb-4 flex-shrink-0">
             {photos.map((photo, index) => (
               <div key={index} className="relative flex-shrink-0">
                 {index === 0 && (
@@ -227,7 +227,7 @@ const PhotoCapture = () => {
         )}
 
         {/* Photo count */}
-        <p className="text-center text-sm text-muted-foreground mb-4">
+        <p className="text-center text-sm text-muted-foreground mb-4 flex-shrink-0">
           {photos.length}/{MAX_PHOTOS} photos added
         </p>
 
@@ -242,8 +242,8 @@ const PhotoCapture = () => {
         />
       </div>
 
-      {/* Fixed bottom button */}
-      <div className="p-4 pb-10 border-t border-border bg-background">
+      {/* Fixed bottom button with safe area padding */}
+      <div className="p-4 pb-[max(16px,env(safe-area-inset-bottom))] border-t border-border bg-background flex-shrink-0">
         <Button
           onClick={handleNext}
           disabled={photos.length === 0 || uploading || analyzing}
