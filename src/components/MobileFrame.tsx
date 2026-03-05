@@ -9,7 +9,10 @@ const MobileFrame = ({ children }: MobileFrameProps) => {
 
   if (isMobile) {
     return (
-      <div className="h-dvh w-full bg-background overflow-hidden relative">
+      <div
+        className="w-full bg-background overflow-hidden relative"
+        style={{ height: '100dvh', minHeight: '-webkit-fill-available' }}
+      >
         {children}
       </div>
     );
