@@ -98,16 +98,13 @@ const PhotoCapture = () => {
     setAnalyzing(true);
 
     try {
-      // Analyze first photo with Claude AI
       const aiAnalysis = await analyzeItemPhoto(photos[0]);
       
       setAnalyzing(false);
       setUploading(true);
 
-      // Upload photos to Supabase Storage
       const uploadedUrls = await uploadPhotosToSupabase();
 
-      // Navigate to next screen with AI suggestions AND uploaded URLs
       navigate("/description", { 
         state: { 
           photos: uploadedUrls,
@@ -128,10 +125,10 @@ const PhotoCapture = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex flex-col bg-background" style={{ height: '100%', maxHeight: '100%' }}>
       <ScreenHeader title="Add Photos" />
 
-      <div className="flex-1 flex flex-col p-12">
+      <div className="flex-1 flex flex-col p-4 overflow-y-auto">
         {/* Camera area */}
         <div className="flex-1 flex flex-col items-center justify-center bg-muted rounded-2xl mb-4 relative overflow-hidden">
           {photos.length === 0 ? (
@@ -191,7 +188,6 @@ const PhotoCapture = () => {
           <div className="flex gap-3 overflow-x-auto pb-2 mb-4">
             {photos.map((photo, index) => (
               <div key={index} className="relative flex-shrink-0">
-                {/* Main Photo Badge */}
                 {index === 0 && (
                   <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-20">
                     <span className="px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full shadow-sm">
@@ -210,7 +206,6 @@ const PhotoCapture = () => {
                   }`}
                 />
                 
-                {/* Clean remove button */}
                 <button
                   onClick={() => removePhoto(index)}
                   className="absolute -top-3 -right-3 w-8 h-8 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all z-10"
@@ -220,7 +215,6 @@ const PhotoCapture = () => {
               </div>
             ))}
             
-            {/* Add more button */}
             {photos.length < MAX_PHOTOS && (
               <button
                 onClick={handleAddPhoto}
@@ -246,8 +240,10 @@ const PhotoCapture = () => {
           onChange={handleFileChange}
           className="hidden"
         />
+      </div>
 
-        {/* Next button */}
+      {/* Fixed bottom button */}
+      <div className="p-4 pb-10 border-t border-border bg-background">
         <Button
           onClick={handleNext}
           disabled={photos.length === 0 || uploading || analyzing}
