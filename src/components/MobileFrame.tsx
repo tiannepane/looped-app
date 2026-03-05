@@ -5,9 +5,9 @@ interface MobileFrameProps {
 }
 
 const MobileFrame = ({ children }: MobileFrameProps) => {
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isSmallScreen = window.innerWidth <= 768;
 
-  if (isMobile) {
+  if (isSmallScreen) {
     return (
       <div
         className="w-full bg-background overflow-hidden relative"
@@ -21,7 +21,6 @@ const MobileFrame = ({ children }: MobileFrameProps) => {
   return (
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <div className="w-[390px] h-[844px] bg-background rounded-[40px] shadow-2xl overflow-hidden relative border-8 border-foreground/10">
-        {/* Status bar */}
         <div className="h-11 bg-background flex items-center justify-between px-6">
           <span className="text-xs font-medium text-foreground">9:41</span>
           <div className="flex items-center gap-1">
@@ -30,7 +29,6 @@ const MobileFrame = ({ children }: MobileFrameProps) => {
             </div>
           </div>
         </div>
-        {/* Content area */}
         <div className="h-[calc(100%-44px)] overflow-hidden" style={{ transform: 'translateZ(0)' }}>
           {children}
         </div>
