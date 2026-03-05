@@ -127,80 +127,33 @@ const PostToPlatforms = () => {
     }
   };
 
-  const openInNewTab = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   const tryDeepLink = (platform: typeof platforms[0]) => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
-    const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
 
     // Desktop: open web in new tab
     if (!isIOS && !isAndroid) {
-      openInNewTab(platform.webUrl);
+      window.open(platform.webUrl, '_blank', 'noopener,noreferrer');
       return;
     }
 
-    // Track if app opened
-    let hasLeftPage = false;
-    let fallbackTriggered = false;
-
-    const handleVisibilityChange = () => {
-      if (document.hidden || document.visibilityState === 'hidden') {
-        hasLeftPage = true;
-      }
-    };
-
-    const handleBlur = () => {
-      hasLeftPage = true;
-    };
-
-    // iOS handling
+    // iOS: Open web FIRST in new tab (guaranteed to work), then try app
     if (isIOS) {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      document.addEventListener('pagehide', handleVisibilityChange);
-      window.addEventListener('blur', handleBlur);
-
-      // Try to open app
-      window.location.href = platform.deepLink;
-
-      // Backup for Chrome
-      if (isChrome) {
-        setTimeout(() => {
-          if (!hasLeftPage) {
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = platform.deepLink;
-            document.body.appendChild(iframe);
-            setTimeout(() => {
-              if (iframe.parentNode) {
-                document.body.removeChild(iframe);
-              }
-            }, 100);
-          }
-        }, 50);
-      }
-
-      // Fallback to web in NEW TAB after delay
+      // CRITICAL: Open web in new tab IMMEDIATELY from user gesture
+      // This prevents the error and gives user a fallback
+      const webWindow = window.open(platform.webUrl, '_blank', 'noopener,noreferrer');
+      
+      // Then try to open app (if installed, user switches to it; if not, they have web tab)
+      // Use a small timeout to let the web tab open first
       setTimeout(() => {
-        if (fallbackTriggered) return;
-        fallbackTriggered = true;
-        
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        document.removeEventListener('pagehide', handleVisibilityChange);
-        window.removeEventListener('blur', handleBlur);
-
-        if (!hasLeftPage) {
-          // App didn't open - open web in new tab so user can switch back
-          openInNewTab(platform.webUrl);
-        }
-      }, 1500);
-
+        // Try to open app - if it works, user leaves this page; if not, web tab is ready
+        window.location.href = platform.deepLink;
+      }, 100);
+      
       return;
     }
 
-    // Android: Intent URL with auto-fallback to new tab
+    // Android: Intent URL with fallback
     if (isAndroid) {
       const intentScheme = platform.deepLink.split('://')[0];
       const intentHost = platform.deepLink.split('://')[1];
@@ -209,16 +162,15 @@ const PostToPlatforms = () => {
       // Build intent URL with embedded fallback
       const intentUrl = `intent://${intentHost}#Intent;scheme=${intentScheme};package=${packageName};S.browser_fallback_url=${encodeURIComponent(platform.webUrl)};end`;
       
-      // Try intent URL first
       window.location.href = intentUrl;
-
+      
       // Backup: open web in new tab after delay if still on page
       setTimeout(() => {
         if (!document.hidden) {
-          openInNewTab(platform.webUrl);
+          window.open(platform.webUrl, '_blank', 'noopener,noreferrer');
         }
-      }, 2000);
-
+      }, 1500);
+      
       return;
     }
   };
@@ -228,9 +180,8 @@ const PostToPlatforms = () => {
       await navigator.clipboard.writeText(listingText);
       toast({ title: `✓ Copied! Opening ${platform.name}...` });
       
-      setTimeout(() => {
-        tryDeepLink(platform);
-      }, 300);
+      // Call immediately while still in user gesture context
+      tryDeepLink(platform);
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
