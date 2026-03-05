@@ -55,6 +55,15 @@ const platforms = [
   },
 ];
 
+const getAndroidPackage = (platformId: string): string => {
+  const packages: Record<string, string> = {
+    facebook: "com.facebook.katana",
+    kijiji: "com.ebay.kijiji.ca",
+    karrot: "com.towneers.www"
+  };
+  return packages[platformId] || "";
+};
+
 const PostToPlatforms = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -120,24 +129,93 @@ const PostToPlatforms = () => {
   };
 
   const tryDeepLink = (platform: typeof platforms[0]) => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
 
-    if (!isMobile) {
+    // Desktop: go straight to web
+    if (!isIOS && !isAndroid) {
       window.open(platform.webUrl, "_blank");
       return;
     }
 
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = platform.deepLink;
-    document.body.appendChild(iframe);
+    // Shared state to track if app opened
+    let appOpened = false;
+    let fallbackTriggered = false;
 
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      if (!document.hidden) {
-        window.open(platform.webUrl, "_blank");
+    // Cancel fallback if app actually opened (page becomes hidden)
+    const handleVisibilityChange = () => {
+      if (document.hidden || document.visibilityState === 'hidden') {
+        appOpened = true;
       }
-    }, 1500);
+    };
+
+    // iOS specific handling (Safari and Chrome)
+    if (isIOS) {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      document.addEventListener('pagehide', handleVisibilityChange);
+
+      // Method 1: Try direct navigation (works in Safari, sometimes in Chrome)
+      window.location.href = platform.deepLink;
+
+      // Method 2: Backup with iframe for Chrome which sometimes blocks location.href
+      if (isChrome) {
+        setTimeout(() => {
+          if (!appOpened && !fallbackTriggered) {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = platform.deepLink;
+            document.body.appendChild(iframe);
+            
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 100);
+          }
+        }, 50);
+      }
+
+      // Fallback to web after delay if app didn't open
+      setTimeout(() => {
+        fallbackTriggered = true;
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        document.removeEventListener('pagehide', handleVisibilityChange);
+        
+        if (!appOpened) {
+          window.location.href = platform.webUrl;
+        }
+      }, 2500);
+
+      return;
+    }
+
+    // Android: Use intent URL with automatic fallback
+    if (isAndroid) {
+      const intentScheme = platform.deepLink.split('://')[0];
+      const intentHost = platform.deepLink.split('://')[1];
+      const packageName = getAndroidPackage(platform.id);
+      
+      // Build intent URL with embedded fallback
+      const intentUrl = `intent://${intentHost}#Intent;scheme=${intentScheme};package=${packageName};S.browser_fallback_url=${encodeURIComponent(platform.webUrl)};end`;
+      
+      // Try intent URL first (opens app if installed, falls back automatically if not)
+      window.location.href = intentUrl;
+
+      // Backup: direct deep link after short delay if still on page
+      setTimeout(() => {
+        if (!document.hidden) {
+          window.location.href = platform.deepLink;
+        }
+      }, 500);
+
+      // Final fallback to web if nothing worked
+      setTimeout(() => {
+        if (!document.hidden) {
+          window.location.href = platform.webUrl;
+        }
+      }, 2000);
+
+      return;
+    }
   };
 
   const handleCopyAndOpen = async (platform: typeof platforms[0]) => {
@@ -148,7 +226,7 @@ const PostToPlatforms = () => {
 
       setTimeout(() => {
         tryDeepLink(platform);
-      }, 500);
+      }, 300);
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
