@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Check, ChevronDown, ChevronUp, ClipboardCopy, Download, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, ClipboardCopy, Download, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -84,12 +84,12 @@ const PostToPlatforms = () => {
   const [copied, setCopied] = useState(false);
   const [showHow, setShowHow] = useState(false);
   const [markedPosted, setMarkedPosted] = useState(false);
-  const [openedPlatforms, setOpenedPlatforms] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [tipCount, setTipCount] = useState(0);
+  const [showInstallPrompt, setShowInstallPrompt] = useState<string | null>(null);
 
   useEffect(() => {
     const count = parseInt(localStorage.getItem("looped_platform_tip_count") || "0");
@@ -139,82 +139,67 @@ const PostToPlatforms = () => {
       return;
     }
 
-    // Shared state to track if app opened
+    // Track if app actually opened
     let appOpened = false;
-    let fallbackTriggered = false;
+    let hasLeftPage = false;
 
-    // Cancel fallback if app actually opened (page becomes hidden)
     const handleVisibilityChange = () => {
       if (document.hidden || document.visibilityState === 'hidden') {
         appOpened = true;
+        hasLeftPage = true;
       }
     };
 
-    // iOS specific handling (Safari and Chrome)
+    const handleBlur = () => {
+      hasLeftPage = true;
+    };
+
+    // iOS handling
     if (isIOS) {
       document.addEventListener('visibilitychange', handleVisibilityChange);
       document.addEventListener('pagehide', handleVisibilityChange);
+      window.addEventListener('blur', handleBlur);
 
-      // Method 1: Try direct navigation (works in Safari, sometimes in Chrome)
+      // Try to open app
       window.location.href = platform.deepLink;
 
-      // Method 2: Backup with iframe for Chrome which sometimes blocks location.href
+      // Backup for Chrome
       if (isChrome) {
         setTimeout(() => {
-          if (!appOpened && !fallbackTriggered) {
+          if (!hasLeftPage) {
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
             iframe.src = platform.deepLink;
             document.body.appendChild(iframe);
-            
-            setTimeout(() => {
-              document.body.removeChild(iframe);
-            }, 100);
+            setTimeout(() => document.body.removeChild(iframe), 100);
           }
         }, 50);
       }
 
-      // Fallback to web after delay if app didn't open
+      // Check if still here after 2 seconds - likely app not installed
       setTimeout(() => {
-        fallbackTriggered = true;
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         document.removeEventListener('pagehide', handleVisibilityChange);
-        
-        if (!appOpened) {
-          window.location.href = platform.webUrl;
+        window.removeEventListener('blur', handleBlur);
+
+        if (!hasLeftPage) {
+          // App didn't open - show install prompt
+          setShowInstallPrompt(platform.id);
         }
-      }, 2500);
+      }, 2000);
 
       return;
     }
 
-    // Android: Use intent URL with automatic fallback
+    // Android: Intent URL with auto-fallback
     if (isAndroid) {
       const intentScheme = platform.deepLink.split('://')[0];
       const intentHost = platform.deepLink.split('://')[1];
       const packageName = getAndroidPackage(platform.id);
       
-      // Build intent URL with embedded fallback
       const intentUrl = `intent://${intentHost}#Intent;scheme=${intentScheme};package=${packageName};S.browser_fallback_url=${encodeURIComponent(platform.webUrl)};end`;
       
-      // Try intent URL first (opens app if installed, falls back automatically if not)
       window.location.href = intentUrl;
-
-      // Backup: direct deep link after short delay if still on page
-      setTimeout(() => {
-        if (!document.hidden) {
-          window.location.href = platform.deepLink;
-        }
-      }, 500);
-
-      // Final fallback to web if nothing worked
-      setTimeout(() => {
-        if (!document.hidden) {
-          window.location.href = platform.webUrl;
-        }
-      }, 2000);
-
-      return;
     }
   };
 
@@ -222,7 +207,9 @@ const PostToPlatforms = () => {
     try {
       await navigator.clipboard.writeText(listingText);
       toast({ title: `✓ Copied! Opening ${platform.name}...` });
-      setOpenedPlatforms((p) => [...new Set([...p, platform.id])]);
+      
+      // Clear any previous install prompt
+      setShowInstallPrompt(null);
 
       setTimeout(() => {
         tryDeepLink(platform);
@@ -230,6 +217,17 @@ const PostToPlatforms = () => {
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
+  };
+
+  const openAppStore = (platform: typeof platforms[0]) => {
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const storeUrl = isIOS ? platform.appStoreUrl : platform.playStoreUrl;
+    window.location.href = storeUrl;
+  };
+
+  const continueToWeb = (platform: typeof platforms[0]) => {
+    setShowInstallPrompt(null);
+    window.open(platform.webUrl, "_blank");
   };
 
   const handleDownloadPhotos = async () => {
@@ -368,6 +366,8 @@ const PostToPlatforms = () => {
     }
   };
 
+  const currentPlatform = showInstallPrompt ? platforms.find(p => p.id === showInstallPrompt) : null;
+
   return (
     <div className="h-full flex flex-col bg-background relative">
       <ScreenHeader title="Post to Platforms" />
@@ -430,7 +430,7 @@ const PostToPlatforms = () => {
                   size="sm"
                   className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-none text-xs px-3 h-9 flex-shrink-0"
                 >
-                  {openedPlatforms.includes(p.id) ? "Opened ✓" : "Copy & Open →"}
+                  Copy & Open <ExternalLink className="w-3 h-3 ml-1" />
                 </Button>
               </Card>
             ))}
@@ -471,6 +471,51 @@ const PostToPlatforms = () => {
         </Button>
       </div>
 
+      {/* App Install Prompt Modal */}
+      {showInstallPrompt && currentPlatform && (
+        <>
+          <div
+            className="absolute inset-0 bg-black/50 z-50"
+            onClick={() => setShowInstallPrompt(null)}
+          />
+          <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-background rounded-2xl p-6 shadow-lg">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0">{currentPlatform.icon}</div>
+              <div>
+                <h3 className="font-semibold text-foreground">{currentPlatform.name}</h3>
+                <p className="text-sm text-muted-foreground">App not installed?</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-muted-foreground mb-6">
+              We couldn't open the {currentPlatform.name} app. You can install it for faster posting, or continue to the website.
+            </p>
+
+            <div className="space-y-3">
+              <Button
+                onClick={() => openAppStore(currentPlatform)}
+                className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              >
+                Install App
+              </Button>
+              <Button
+                onClick={() => continueToWeb(currentPlatform)}
+                variant="outline"
+                className="w-full h-12 rounded-xl"
+              >
+                Continue to Website
+              </Button>
+              <button
+                onClick={() => setShowInstallPrompt(null)}
+                className="w-full text-sm text-muted-foreground py-2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Onboarding Bottom Sheet */}
       {showOnboarding && (
         <>
@@ -500,7 +545,6 @@ const PostToPlatforms = () => {
                       <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">{p.name}</p>
                       </div>
-                      <span className="text-xs text-green-600 font-medium"></span>
                     </div>
                   ))}
                 </div>
