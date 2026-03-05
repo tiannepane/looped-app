@@ -1,3 +1,11 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -102,9 +110,9 @@ Description: [description]`
       }
     });
 
-    res.json(parsed);
+    return res.json(parsed);
   } catch (error) {
     console.error('Error analyzing photo:', error);
-    res.status(500).json({ error: 'Failed to analyze photo' });
+    return res.status(500).json({ error: 'Failed to analyze photo' });
   }
 }
