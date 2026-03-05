@@ -131,7 +131,7 @@ const PhotoCapture = () => {
     <div className="h-full flex flex-col bg-background">
       <ScreenHeader title="Add Photos" />
 
-      <div className="flex-1 flex flex-col p-4">
+      <div className="flex-1 flex flex-col p-12">
         {/* Camera area */}
         <div className="flex-1 flex flex-col items-center justify-center bg-muted rounded-2xl mb-4 relative overflow-hidden">
           {photos.length === 0 ? (
