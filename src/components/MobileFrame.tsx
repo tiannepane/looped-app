@@ -10,14 +10,16 @@ const MobileFrame = ({ children }: MobileFrameProps) => {
   if (isSmallScreen) {
     return (
       <div
-        className="w-full bg-background overflow-hidden relative"
+        className="w-full bg-background relative flex flex-col"
         style={{
           height: '100dvh',
           minHeight: '-webkit-fill-available',
-          paddingBottom: 'env(safe-area-inset-bottom, 20px)'
         }}
       >
-        {children}
+        <div className="flex-1 overflow-hidden relative">
+          {children}
+        </div>
+        <div style={{ height: '34px', flexShrink: 0 }} />
       </div>
     );
   }
