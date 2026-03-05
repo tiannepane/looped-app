@@ -89,7 +89,6 @@ const PostToPlatforms = () => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [tipCount, setTipCount] = useState(0);
-  const [showInstallPrompt, setShowInstallPrompt] = useState<string | null>(null);
 
   useEffect(() => {
     const count = parseInt(localStorage.getItem("looped_platform_tip_count") || "0");
@@ -128,24 +127,27 @@ const PostToPlatforms = () => {
     }
   };
 
+  const openInNewTab = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const tryDeepLink = (platform: typeof platforms[0]) => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
 
-    // Desktop: go straight to web
+    // Desktop: open web in new tab
     if (!isIOS && !isAndroid) {
-      window.open(platform.webUrl, "_blank");
+      openInNewTab(platform.webUrl);
       return;
     }
 
-    // Track if app actually opened
-    let appOpened = false;
+    // Track if app opened
     let hasLeftPage = false;
+    let fallbackTriggered = false;
 
     const handleVisibilityChange = () => {
       if (document.hidden || document.visibilityState === 'hidden') {
-        appOpened = true;
         hasLeftPage = true;
       }
     };
@@ -171,35 +173,53 @@ const PostToPlatforms = () => {
             iframe.style.display = 'none';
             iframe.src = platform.deepLink;
             document.body.appendChild(iframe);
-            setTimeout(() => document.body.removeChild(iframe), 100);
+            setTimeout(() => {
+              if (iframe.parentNode) {
+                document.body.removeChild(iframe);
+              }
+            }, 100);
           }
         }, 50);
       }
 
-      // Check if still here after 2 seconds - likely app not installed
+      // Fallback to web in NEW TAB after delay
       setTimeout(() => {
+        if (fallbackTriggered) return;
+        fallbackTriggered = true;
+        
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         document.removeEventListener('pagehide', handleVisibilityChange);
         window.removeEventListener('blur', handleBlur);
 
         if (!hasLeftPage) {
-          // App didn't open - show install prompt
-          setShowInstallPrompt(platform.id);
+          // App didn't open - open web in new tab so user can switch back
+          openInNewTab(platform.webUrl);
         }
-      }, 2000);
+      }, 1500);
 
       return;
     }
 
-    // Android: Intent URL with auto-fallback
+    // Android: Intent URL with auto-fallback to new tab
     if (isAndroid) {
       const intentScheme = platform.deepLink.split('://')[0];
       const intentHost = platform.deepLink.split('://')[1];
       const packageName = getAndroidPackage(platform.id);
       
+      // Build intent URL with embedded fallback
       const intentUrl = `intent://${intentHost}#Intent;scheme=${intentScheme};package=${packageName};S.browser_fallback_url=${encodeURIComponent(platform.webUrl)};end`;
       
+      // Try intent URL first
       window.location.href = intentUrl;
+
+      // Backup: open web in new tab after delay if still on page
+      setTimeout(() => {
+        if (!document.hidden) {
+          openInNewTab(platform.webUrl);
+        }
+      }, 2000);
+
+      return;
     }
   };
 
@@ -208,26 +228,12 @@ const PostToPlatforms = () => {
       await navigator.clipboard.writeText(listingText);
       toast({ title: `✓ Copied! Opening ${platform.name}...` });
       
-      // Clear any previous install prompt
-      setShowInstallPrompt(null);
-
       setTimeout(() => {
         tryDeepLink(platform);
       }, 300);
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
-  };
-
-  const openAppStore = (platform: typeof platforms[0]) => {
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const storeUrl = isIOS ? platform.appStoreUrl : platform.playStoreUrl;
-    window.location.href = storeUrl;
-  };
-
-  const continueToWeb = (platform: typeof platforms[0]) => {
-    setShowInstallPrompt(null);
-    window.open(platform.webUrl, "_blank");
   };
 
   const handleDownloadPhotos = async () => {
@@ -366,8 +372,6 @@ const PostToPlatforms = () => {
     }
   };
 
-  const currentPlatform = showInstallPrompt ? platforms.find(p => p.id === showInstallPrompt) : null;
-
   return (
     <div className="h-full flex flex-col bg-background relative">
       <ScreenHeader title="Post to Platforms" />
@@ -470,51 +474,6 @@ const PostToPlatforms = () => {
           {saving ? "Saving..." : hasSubmitted ? "Already Saved" : "Done"}
         </Button>
       </div>
-
-      {/* App Install Prompt Modal */}
-      {showInstallPrompt && currentPlatform && (
-        <>
-          <div
-            className="absolute inset-0 bg-black/50 z-50"
-            onClick={() => setShowInstallPrompt(null)}
-          />
-          <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-background rounded-2xl p-6 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-shrink-0">{currentPlatform.icon}</div>
-              <div>
-                <h3 className="font-semibold text-foreground">{currentPlatform.name}</h3>
-                <p className="text-sm text-muted-foreground">App not installed?</p>
-              </div>
-            </div>
-            
-            <p className="text-sm text-muted-foreground mb-6">
-              We couldn't open the {currentPlatform.name} app. You can install it for faster posting, or continue to the website.
-            </p>
-
-            <div className="space-y-3">
-              <Button
-                onClick={() => openAppStore(currentPlatform)}
-                className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-              >
-                Install App
-              </Button>
-              <Button
-                onClick={() => continueToWeb(currentPlatform)}
-                variant="outline"
-                className="w-full h-12 rounded-xl"
-              >
-                Continue to Website
-              </Button>
-              <button
-                onClick={() => setShowInstallPrompt(null)}
-                className="w-full text-sm text-muted-foreground py-2"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Onboarding Bottom Sheet */}
       {showOnboarding && (
