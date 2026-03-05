@@ -11,7 +11,11 @@ const MobileFrame = ({ children }: MobileFrameProps) => {
     return (
       <div
         className="w-full bg-background overflow-hidden relative"
-        style={{ height: '100dvh', minHeight: '-webkit-fill-available' }}
+        style={{
+          height: '100dvh',
+          minHeight: '-webkit-fill-available',
+          paddingBottom: 'env(safe-area-inset-bottom, 20px)'
+        }}
       >
         {children}
       </div>
