@@ -5,6 +5,16 @@ interface MobileFrameProps {
 }
 
 const MobileFrame = ({ children }: MobileFrameProps) => {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    return (
+      <div className="h-dvh w-full bg-background overflow-hidden relative">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <div className="w-[390px] h-[844px] bg-background rounded-[40px] shadow-2xl overflow-hidden relative border-8 border-foreground/10">
